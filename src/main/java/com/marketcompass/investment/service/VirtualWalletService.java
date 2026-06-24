@@ -64,21 +64,21 @@ public class VirtualWalletService {
      * Buy by share count. e.g. buy("AAPL", 5, "MANUAL")
      */
     public TradeRecord buy(String ticker, double shares, String source) {
-        ticker = ticker.toUpperCase();
-        double price = resolvePrice(ticker);
+        final String t = ticker.toUpperCase();
+        double price = resolvePrice(t);
         double total = Math.round(shares * price * 100.0) / 100.0;
 
         wallet.debit(total);
 
         // Update or create holding in portfolio
-        updateHoldingOnBuy(ticker, shares, price);
+        updateHoldingOnBuy(t, shares, price);
 
         TradeRecord record = TradeRecord.builder()
                 .id(nextTradeId())
                 .side("BUY")
-                .ticker(ticker)
-                .assetName(resolveName(ticker))
-                .assetType(resolveType(ticker))
+                .ticker(t)
+                .assetName(resolveName(t))
+                .assetType(resolveType(t))
                 .shares(shares)
                 .executedPrice(price)
                 .gainLoss(0)
@@ -107,14 +107,14 @@ public class VirtualWalletService {
      * Sell by share count. Calculates realized gain/loss vs. avg cost basis.
      */
     public TradeRecord sell(String ticker, double sharesToSell, String source) {
-        ticker = ticker.toUpperCase();
+        final String t = ticker.toUpperCase();
 
         Optional<PortfolioHolding> holdingOpt = portfolioService.getHoldings().stream()
-                .filter(h -> h.getTicker().equals(ticker))
+                .filter(h -> h.getTicker().equals(t))
                 .findFirst();
 
         if (holdingOpt.isEmpty()) {
-            throw new IllegalArgumentException("No holding found for ticker: " + ticker);
+            throw new IllegalArgumentException("No holding found for ticker: " + t);
         }
 
         PortfolioHolding holding = holdingOpt.get();
@@ -123,18 +123,18 @@ public class VirtualWalletService {
                     "Cannot sell " + sharesToSell + " shares — only " + holding.getShares() + " held");
         }
 
-        double price = resolvePrice(ticker);
+        double price = resolvePrice(t);
         double proceeds = Math.round(sharesToSell * price * 100.0) / 100.0;
         double costBasis = Math.round(sharesToSell * holding.getAvgCostBasis() * 100.0) / 100.0;
         double gainLoss = Math.round((proceeds - costBasis) * 100.0) / 100.0;
 
         wallet.credit(proceeds, costBasis);
-        updateHoldingOnSell(ticker, sharesToSell, holding);
+        updateHoldingOnSell(t, sharesToSell, holding);
 
         TradeRecord record = TradeRecord.builder()
                 .id(nextTradeId())
                 .side("SELL")
-                .ticker(ticker)
+                .ticker(t)
                 .assetName(holding.getName())
                 .assetType(holding.getType())
                 .shares(sharesToSell)
