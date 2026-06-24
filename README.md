@@ -63,6 +63,18 @@ Starting balance: **$25,000** (paper trading — no real money)
 
 ---
 
+## 👁️ Watchlist
+
+| Method | Endpoint | Body |
+|---|---|---|
+| GET | `/api/watchlist` | — |
+| GET | `/api/watchlist/alerts` | — |
+| GET | `/api/watchlist/{ticker}` | — |
+| POST | `/api/watchlist` | `{"ticker":"NVDA","targetPrice":850,"alertThreshold":5,"notes":"..."}` |
+| DELETE | `/api/watchlist/{ticker}` | — |
+
+---
+
 ## 🤖 Brokerage Agent
 
 | Method | Endpoint | Notes |
@@ -77,7 +89,7 @@ Starting balance: **$25,000** (paper trading — no real money)
 - [x] Virtual wallet ($25k balance)
 - [x] Buy / Sell by shares or dollar amount
 - [x] Trade history
-- [ ] Watchlist (add/remove tickers to monitor)
+- [x] Watchlist (add/remove tickers to monitor)
 - [ ] Market open/close simulation with agent reactions
 - [ ] SIP scheduler (auto-invest on interval)
 - [ ] Docker + Render.com deployment
