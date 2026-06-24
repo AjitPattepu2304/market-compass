@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MarketCompass — Investment Study Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body{font-family:system-ui,sans-serif}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#0f172a}::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+    .nav-link{display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;color:#94a3b8;transition:all .15s;margin:2px 8px}
+    .nav-link:hover{background:#1e293b;color:#e2e8f0}.nav-link.active{background:#064e3b;color:#34d399;font-weight:600}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px}
+    table{width:100%;border-collapse:collapse}
+    thead th{padding:9px 13px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#64748b;border-bottom:1px solid #334155}
+    tbody tr{border-bottom:1px solid #1e293b;transition:background .1s}tbody tr:hover{background:#1e293b}tbody td{padding:9px 13px;font-size:13px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+    .bg-green{background:#064e3b;color:#34d399}.bg-blue{background:#1e3a5f;color:#60a5fa}
+    .bg-amber{background:#451a03;color:#fbbf24}.bg-purple{background:#3b0764;color:#c084fc}
+    .bg-red{background:#450a0a;color:#f87171}.bg-cyan{background:#083344;color:#67e8f9}
+    .btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+    .btn-primary{background:#059669;color:#fff}.btn-primary:hover{background:#10b981}
+    .btn-danger{background:#991b1b;color:#fff}.btn-danger:hover{background:#dc2626}
+    .btn-ghost{background:transparent;color:#94a3b8;border:1px solid #475569}.btn-ghost:hover{color:#e2e8f0;border-color:#64748b}
+    input,select{background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;padding:7px 11px;font-size:13px;outline:none}
+    input:focus,select:focus{border-color:#059669}
+    .pos{color:#34d399}.neg{color:#f87171}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:50;display:flex;align-items:center;justify-content:center}
+    .modal-box{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:26px;max-width:640px;width:92%;max-height:90vh;overflow-y:auto}
+    .tab-btn{padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;border:none;color:#64748b;background:transparent}
+    .tab-btn.active{background:#064e3b;color:#34d399;font-weight:600}
+    .info-box{background:#0c2d22;border:1px solid #065f46;border-radius:8px;padding:12px 15px}
+    .range-bar{background:#334155;border-radius:999px;height:5px;overflow:hidden}
+    .range-fill{background:linear-gradient(90deg,#059669,#34d399);border-radius:999px;height:100%}
+    .chip-badge-FABLESS{background:#1e3a5f;color:#60a5fa}
+    .chip-badge-IDM{background:#3b1a6b;color:#c084fc}
+    .chip-badge-FOUNDRY{background:#064e3b;color:#34d399}
+    .chip-badge-EQUIPMENT{background:#451a03;color:#fbbf24}
+    .chip-badge-MEMORY{background:#450a0a;color:#f87171}
+    .chip-badge-ANALOG{background:#083344;color:#67e8f9}
+    .signal-STRONG_BUY{background:#064e3b;color:#34d399}
+    .signal-BUY{background:#1e3a5f;color:#60a5fa}
+    .signal-WATCH{background:#451a03;color:#fbbf24}
+    .signal-HOLD{background:#1e293b;color:#64748b}
+    .score-bar{background:#1e293b;border-radius:999px;height:6px;overflow:hidden;margin-top:4px}
+    .score-fill{border-radius:999px;height:100%;background:linear-gradient(90deg,#059669,#34d399);transition:width .4s}
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex">
+
+<!-- ══════════════════ SIDEBAR ══════════════════ -->
+<aside class="w-52 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col" style="height:100vh;position:sticky;top:0">
+  <div class="p-5 border-b border-slate-800">
+    <div class="text-emerald-400 font-bold text-base">🧭 MarketCompass</div>
+    <div class="text-slate-500 text-xs mt-0.5">Investment Study Hub</div>
+  </div>
+  <nav class="flex-1 py-2 overflow-y-auto">
+    <p class="px-4 pt-3 pb-1 text-xs font-semibold text-slate-600 uppercase tracking-wider">Overview</p>
+    <div class="nav-link active" id="nav-dashboard"    onclick="goTo('dashboard')">🏠 Dashboard</div>
+    <p class="px-4 pt-3 pb-1 text-xs font-semibold text-slate-600 uppercase tracking-wider">Research</p>
+    <div class="nav-link" id="nav-stocks"      onclick="goTo('stocks')">📈 Stocks</div>
+    <div class="nav-link" id="nav-chips"       onclick="goTo('chips')">💾 Semiconductors</div>
+    <div class="nav-link" id="nav-etfs"        onclick="goTo('etfs')">📊 ETFs</div>
+    <div class="nav-link" id="nav-dividends"   onclick="goTo('dividends')">💰 Dividends</div>
+    <p class="px-4 pt-3 pb-1 text-xs font-semibold text-slate-600 uppercase tracking-wider">Tools</p>
+    <div class="nav-link" id="nav-portfolio"   onclick="goTo('portfolio')">💼 Portfolio</div>
+    <div class="nav-link" id="nav-calculator"  onclick="goTo('calculator')">🧮 Calculator</div>
+    <div class="nav-link" id="nav-agent"       onclick="goTo('agent')">🤖 Agent</div>
+  </nav>
+  <div class="p-4 border-t border-slate-800 text-xs text-slate-600">⚠️ Educational only.<br>Not financial advice.</div>
+</aside>
+
+<!-- ══════════════════ MAIN ══════════════════ -->
+<main class="flex-1 overflow-y-auto" style="height:100vh">
+
+  <!-- ─── DASHBOARD ─────────────────────────── -->
+  <div id="page-dashboard" class="p-6 max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-1">Dashboard</h1>
+    <p class="text-slate-400 text-sm mb-5">Your portfolio overview. Add holdings in the Portfolio tab.</p>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+      <div class="card"><p class="text-slate-400 text-xs font-medium">TOTAL INVESTED</p><p class="text-2xl font-bold mt-1" id="d-invested">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">CURRENT VALUE</p><p class="text-2xl font-bold mt-1" id="d-value">—</p><p class="text-xs mt-0.5" id="d-gl-pct">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">TOTAL GAIN / LOSS</p><p class="text-2xl font-bold mt-1" id="d-gl">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">ANNUAL DIV. INCOME</p><p class="text-2xl font-bold text-emerald-400 mt-1" id="d-income">—</p><p class="text-slate-400 text-xs mt-0.5" id="d-monthly">—</p></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+      <div class="card"><h3 class="font-semibold mb-3">Sector Allocation</h3><canvas id="chart-dash-sector" style="max-height:210px"></canvas></div>
+      <div class="card"><h3 class="font-semibold mb-3">Holdings</h3><div id="d-holdings"></div></div>
+    </div>
+    <div class="info-box"><p class="text-emerald-300 font-semibold text-sm">💡 The 3-Fund Portfolio</p><p class="text-slate-300 text-sm mt-1">Many experts start with just 3 ETFs: <strong>VTI</strong> (US stocks) + <strong>VXUS</strong> (International) + <strong>BND</strong> (Bonds). Simple, diversified, ultra-low cost. Adjust ratio by age and risk tolerance.</p></div>
+  </div>
+
+  <!-- ─── STOCKS ─────────────────────────────── -->
+  <div id="page-stocks" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div><h1 class="text-2xl font-bold">Stocks</h1><p class="text-slate-400 text-sm mt-0.5">Click any row for details. Semiconductor stocks have a dedicated page.</p></div>
+      <div class="flex gap-2 flex-wrap">
+        <input type="text" id="stock-search" placeholder="Search…" style="width:200px" oninput="filterStocks()"/>
+        <select id="stock-sector" onchange="filterStocks()"><option value="">All Sectors</option></select>
+      </div>
+    </div>
+    <div class="info-box mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-400">
+      <div><span class="text-slate-200 font-medium">P/E Ratio</span> — Price ÷ Earnings. S&P 500 avg ~22×. Lower = cheaper.</div>
+      <div><span class="text-slate-200 font-medium">Div. Yield</span> — Annual dividend ÷ price. Higher = more income per dollar.</div>
+      <div><span class="text-slate-200 font-medium">Beta</span> — vs. market. &gt;1 = more volatile. &lt;1 = more stable.</div>
+      <div><span class="text-slate-200 font-medium">52W Range</span> — How near to annual high/low the stock is trading.</div>
+    </div>
+    <div class="card p-0 overflow-hidden"><div class="overflow-x-auto"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Price</th><th>P/E</th><th>Div. Yield</th><th>1Y Return</th><th>Beta</th><th>Size</th></tr></thead>
+      <tbody id="stocks-tbody"></tbody>
+    </table></div></div>
+  </div>
+
+  <!-- ─── SEMICONDUCTORS ──────────────────────── -->
+  <div id="page-chips" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div><h1 class="text-2xl font-bold">💾 Semiconductors</h1><p class="text-slate-400 text-sm mt-0.5">The full chip value chain — from equipment makers to fabless designers.</p></div>
+      <select id="chip-type-filter" onchange="filterChips()">
+        <option value="">All Types</option>
+        <option value="FABLESS">Fabless (designs chips, outsources fab)</option>
+        <option value="IDM">IDM (designs + manufactures)</option>
+        <option value="FOUNDRY">Foundry (pure manufacturer)</option>
+        <option value="EQUIPMENT">Equipment (fab machines)</option>
+        <option value="MEMORY">Memory (DRAM / NAND)</option>
+        <option value="ANALOG">Analog / Mixed-Signal</option>
+      </select>
+    </div>
+
+    <!-- Value chain explainer -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-5 text-xs text-center">
+      <div class="card py-3"><div class="text-amber-400 font-bold text-sm mb-1">⚙️ Equipment</div><p class="text-slate-400">ASML, AMAT, LRCX, KLAC — makes the machines that make chips</p></div>
+      <div class="text-slate-600 flex items-center justify-center text-xl">→</div>
+      <div class="card py-3"><div class="text-emerald-400 font-bold text-sm mb-1">🏭 Foundry</div><p class="text-slate-400">TSMC — manufactures chips designed by others</p></div>
+      <div class="text-slate-600 flex items-center justify-center text-xl">→</div>
+      <div class="card py-3"><div class="text-blue-400 font-bold text-sm mb-1">🧠 Fabless</div><p class="text-slate-400">NVDA, AMD, QCOM — designs chips, no fabs</p></div>
+    </div>
+
+    <!-- Cap tier tabs -->
+    <div class="flex gap-2 mb-4">
+      <button class="tab-btn active" id="chip-tab-all"    onclick="setChipTab('all')">All</button>
+      <button class="tab-btn" id="chip-tab-large"   onclick="setChipTab('Mega-Cap,Large-Cap')">🔵 Large Cap (&gt;$100B)</button>
+      <button class="tab-btn" id="chip-tab-mid"     onclick="setChipTab('Mid-Cap')">🟡 Mid Cap ($10-100B)</button>
+      <button class="tab-btn" id="chip-tab-small"   onclick="setChipTab('Small-Cap')">🔴 Small Cap (&lt;$10B)</button>
+    </div>
+
+    <div class="card p-0 overflow-hidden"><div class="overflow-x-auto"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>Type</th><th>Market Cap</th><th>Price</th><th>P/E</th><th>1Y Return</th><th>% from High</th><th>Div. Yield</th><th>Size</th></tr></thead>
+      <tbody id="chips-tbody"></tbody>
+    </table></div></div>
+
+    <div class="info-box mt-4"><p class="text-emerald-300 font-semibold text-sm">🔬 Chip Industry Primer</p>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2 text-xs text-slate-400">
+        <div><span class="text-slate-200 font-medium">Fabless vs IDM:</span> Fabless companies (NVDA, AMD) have higher margins but depend on TSMC. IDMs (INTC, TXN) have more control but higher capex.</div>
+        <div><span class="text-slate-200 font-medium">The AI Supercycle:</span> AI training needs GPUs (NVDA), memory (MU HBM), power chips (MPWR), networking (AVGO, MRVL). Data-centre chip demand growing 30-50%/yr.</div>
+        <div><span class="text-slate-200 font-medium">EV Tailwind:</span> Each EV uses 2-5× more chips than a petrol car. SiC power chips (ON, STM) and MCUs (MCHP, TXN) are key beneficiaries.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ETFs ────────────────────────────────── -->
+  <div id="page-etfs" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div><h1 class="text-2xl font-bold">ETFs</h1><p class="text-slate-400 text-sm mt-0.5">One trade, instant diversification. Expense ratio is everything for passive funds.</p></div>
+      <select id="etf-category" onchange="filterETFs()">
+        <option value="">All Categories</option>
+        <option value="BROAD_MARKET">Broad Market</option><option value="SP500">S&P 500</option>
+        <option value="TECH">Technology</option><option value="DIVIDEND">Dividend</option>
+        <option value="BOND">Bonds</option><option value="INTERNATIONAL">International</option>
+        <option value="VALUE">Value</option><option value="GROWTH">Growth</option><option value="REIT">Real Estate</option>
+      </select>
+    </div>
+    <div class="info-box mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-400">
+      <div><span class="text-slate-200 font-medium">Expense Ratio:</span> Annual fee. 0.03% = $3/yr per $10k. Always choose lower cost when tracking the same index.</div>
+      <div><span class="text-slate-200 font-medium">AUM:</span> Total $ invested. Larger = more liquid = tighter spreads.</div>
+      <div><span class="text-slate-200 font-medium">Distribution Yield:</span> Income paid out annually. Different from total return (which includes price appreciation).</div>
+    </div>
+    <div class="card p-0 overflow-hidden mb-4"><div class="overflow-x-auto"><table>
+      <thead><tr><th>Ticker</th><th>Name</th><th>Category</th><th>Price</th><th>Expense Ratio</th><th>AUM</th><th>Holdings</th><th>Yield</th><th>1Y</th><th>5Y</th><th>10Y</th></tr></thead>
+      <tbody id="etfs-tbody"></tbody>
+    </table></div></div>
+    <div class="card">
+      <h3 class="font-semibold mb-3">💸 Cost of Fees — $10,000 invested 30 years at 7% annual growth</h3>
+      <div id="expense-comparison" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- ─── DIVIDENDS ────────────────────────────── -->
+  <div id="page-dividends" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div><h1 class="text-2xl font-bold">Dividends</h1><p class="text-slate-400 text-sm mt-0.5">Income investing — get paid while you wait for price appreciation.</p></div>
+      <div class="flex gap-2">
+        <button class="tab-btn active" id="div-tab-all"         onclick="setDivTab('all')">All</button>
+        <button class="tab-btn" id="div-tab-kings"       onclick="setDivTab('kings')">👑 Kings</button>
+        <button class="tab-btn" id="div-tab-aristocrats" onclick="setDivTab('aristocrats')">🏅 Aristocrats</button>
+        <button class="tab-btn" id="div-tab-monthly"     onclick="setDivTab('monthly')">📅 Monthly</button>
+      </div>
+    </div>
+    <div class="info-box mb-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-400">
+      <div><span class="text-slate-200 font-medium">Dividend King:</span> 50+ consecutive years of increases. ~50 companies qualify worldwide.</div>
+      <div><span class="text-slate-200 font-medium">Aristocrat:</span> 25+ years of increases AND in the S&P 500. ~65 companies.</div>
+      <div><span class="text-slate-200 font-medium">Payout Ratio:</span> % of earnings paid as dividends. Under 60% = healthy. Over 80% = risky.</div>
+      <div><span class="text-slate-200 font-medium">DRIP:</span> Reinvest dividends to buy more shares automatically. Massively accelerates compounding.</div>
+    </div>
+    <div class="card mb-4">
+      <h3 class="font-semibold mb-3">💰 Quick Income Estimator</h3>
+      <div class="flex gap-3 items-end flex-wrap">
+        <div><label class="text-xs text-slate-400 block mb-1">Investment ($)</label><input type="number" id="div-inv" value="10000" style="width:110px"/></div>
+        <div><label class="text-xs text-slate-400 block mb-1">Avg Yield (%)</label><input type="number" id="div-yld" value="3.5" step="0.1" style="width:90px"/></div>
+        <button class="btn btn-primary" onclick="estimateIncome()">Calculate</button>
+        <div id="div-income-result" class="text-sm"></div>
+      </div>
+    </div>
+    <div class="card p-0 overflow-hidden"><div class="overflow-x-auto"><table>
+      <thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th>Price</th><th>Annual Div</th><th>Yield</th><th>Freq.</th><th>Payout</th><th>Yrs Growth</th><th>5Y Div Growth</th><th>Status</th></tr></thead>
+      <tbody id="divs-tbody"></tbody>
+    </table></div></div>
+  </div>
+
+  <!-- ─── PORTFOLIO ────────────────────────────── -->
+  <div id="page-portfolio" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+      <div><h1 class="text-2xl font-bold">Portfolio</h1><p class="text-slate-400 text-sm mt-0.5">Track cost basis, unrealised gains, and dividend income.</p></div>
+      <button class="btn btn-primary" onclick="$('add-modal').classList.remove('hidden')">+ Add Holding</button>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div class="card"><p class="text-slate-400 text-xs">INVESTED</p><p class="text-xl font-bold mt-1" id="p-invested">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs">CURRENT VALUE</p><p class="text-xl font-bold mt-1" id="p-value">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs">GAIN / LOSS</p><p class="text-xl font-bold mt-1" id="p-gl">—</p><p class="text-xs mt-0.5" id="p-gl-pct">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs">ANNUAL INCOME</p><p class="text-xl font-bold text-emerald-400 mt-1" id="p-income">—</p><p class="text-slate-400 text-xs mt-0.5" id="p-yield">—</p></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+      <div class="lg:col-span-2 card p-0 overflow-hidden">
+        <div class="p-4 border-b border-slate-700 font-semibold text-sm">Holdings</div>
+        <div class="overflow-x-auto"><table>
+          <thead><tr><th>Ticker</th><th>Type</th><th>Shares</th><th>Cost Basis</th><th>Curr. Price</th><th>Market Value</th><th>Gain/Loss</th><th>Return %</th><th>Yield on Cost</th><th></th></tr></thead>
+          <tbody id="portfolio-tbody"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold mb-3 text-sm">Allocation</h3>
+        <canvas id="chart-port-sector" style="max-height:190px"></canvas>
+        <div id="port-sector-legend" class="mt-3 space-y-1 text-xs"></div>
+      </div>
+    </div>
+    <div class="info-box"><p class="text-emerald-300 font-semibold text-sm">💡 Diversification Rule</p><p class="text-slate-300 text-sm mt-1">No single position should exceed 5-10% of your portfolio. Spread across at least 3-4 sectors. Use a broad ETF (VTI/VOO) as the foundation.</p></div>
+  </div>
+
+  <!-- ─── CALCULATOR ───────────────────────────── -->
+  <div id="page-calculator" class="p-6 max-w-5xl mx-auto hidden">
+    <h1 class="text-2xl font-bold mb-1">Calculator</h1>
+    <p class="text-slate-400 text-sm mb-5">Model the maths behind wealth building.</p>
+    <div class="flex gap-2 mb-5">
+      <button class="tab-btn active" id="calc-tab-compound"   onclick="setCalcTab('compound')">📈 Compound Interest</button>
+      <button class="tab-btn" id="calc-tab-drip"        onclick="setCalcTab('drip')">💧 DRIP</button>
+      <button class="tab-btn" id="calc-tab-retirement"  onclick="setCalcTab('retirement')">🏖️ Retirement</button>
+    </div>
+
+    <!-- Compound -->
+    <div id="calc-compound" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="card">
+        <h3 class="font-semibold mb-3">Compound Interest</h3>
+        <div class="info-box mb-3 text-xs text-slate-400"><strong class="text-emerald-300">A = P(1 + r/n)^(nt)</strong><br>Each year's growth builds on the last — the longer you wait, the more dramatic this becomes.</div>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-400 block mb-1">Initial Investment ($)</label><input type="number" id="ci-principal" value="10000" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Annual Return (%)</label><input type="number" id="ci-rate" value="7" step="0.5" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Years</label><input type="number" id="ci-years" value="30" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Compounds/Year</label><select id="ci-compounds" class="w-full"><option value="1">Annual</option><option value="4">Quarterly</option><option value="12" selected>Monthly</option><option value="365">Daily</option></select></div>
+          <button class="btn btn-primary w-full" onclick="calcCompound()">Calculate</button>
+        </div>
+        <div id="ci-result" class="mt-4 space-y-2 hidden">
+          <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Final Amount</p><p class="text-2xl font-bold text-emerald-400" id="ci-final">—</p></div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Interest Earned</p><p class="font-bold text-emerald-300" id="ci-interest">—</p></div>
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Money Multiplied</p><p class="font-bold" id="ci-multiplied">—</p></div>
+            <div class="bg-slate-800 rounded p-2 text-center col-span-2"><p class="text-slate-500">Doubles every (Rule of 72)</p><p class="font-bold" id="ci-rule72">—</p></div>
+          </div>
+          <p class="text-xs text-slate-400 italic" id="ci-lesson"></p>
+        </div>
+      </div>
+      <div class="lg:col-span-2 card"><h3 class="font-semibold mb-3">Growth Over Time</h3><canvas id="chart-compound" style="max-height:340px"></canvas></div>
+    </div>
+
+    <!-- DRIP -->
+    <div id="calc-drip" class="grid grid-cols-1 lg:grid-cols-3 gap-4 hidden">
+      <div class="card">
+        <h3 class="font-semibold mb-3">DRIP Calculator</h3>
+        <div class="info-box mb-3 text-xs text-slate-400"><strong class="text-emerald-300">Dividend Reinvestment Plan</strong><br>Reinvesting dividends buys more shares → more dividends → exponential compounding.</div>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-400 block mb-1">Initial Investment ($)</label><input type="number" id="drip-inv" value="10000" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Starting Yield (%)</label><input type="number" id="drip-yield" value="3.5" step="0.1" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Annual Div Growth (%)</label><input type="number" id="drip-dg" value="6" step="0.5" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Annual Price Growth (%)</label><input type="number" id="drip-pg" value="7" step="0.5" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Years</label><input type="number" id="drip-years" value="25" class="w-full"/></div>
+          <button class="btn btn-primary w-full" onclick="calcDRIP()">Calculate</button>
+        </div>
+        <div id="drip-result" class="mt-4 space-y-2 hidden">
+          <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Final Value with DRIP</p><p class="text-2xl font-bold text-emerald-400" id="drip-final">—</p></div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Without DRIP</p><p class="font-bold" id="drip-nodrip">—</p></div>
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">DRIP Advantage</p><p class="font-bold text-emerald-300" id="drip-adv">—</p></div>
+            <div class="bg-slate-800 rounded p-2 col-span-2 text-center"><p class="text-slate-500">Total Dividends Reinvested</p><p class="font-bold" id="drip-total">—</p></div>
+          </div>
+          <p class="text-xs text-slate-400 italic" id="drip-lesson"></p>
+        </div>
+      </div>
+      <div class="lg:col-span-2 card"><h3 class="font-semibold mb-3">With vs Without DRIP</h3><canvas id="chart-drip" style="max-height:340px"></canvas></div>
+    </div>
+
+    <!-- Retirement -->
+    <div id="calc-retirement" class="grid grid-cols-1 lg:grid-cols-3 gap-4 hidden">
+      <div class="card">
+        <h3 class="font-semibold mb-3">Retirement Savings</h3>
+        <div class="info-box mb-3 text-xs text-slate-400"><strong class="text-emerald-300">Monthly contributions + compound growth</strong><br>Small consistent amounts invested for decades become life-changing wealth.</div>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-400 block mb-1">Monthly Contribution ($)</label><input type="number" id="ret-monthly" value="500" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Annual Return (%)</label><input type="number" id="ret-rate" value="7" step="0.5" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Years</label><input type="number" id="ret-years" value="30" class="w-full"/></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Already Saved ($)</label><input type="number" id="ret-init" value="0" class="w-full"/></div>
+          <button class="btn btn-primary w-full" onclick="calcRetirement()">Calculate</button>
+        </div>
+        <div id="ret-result" class="mt-4 space-y-2 hidden">
+          <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Retirement Balance</p><p class="text-2xl font-bold text-emerald-400" id="ret-final">—</p></div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">You Contributed</p><p class="font-bold" id="ret-contrib">—</p></div>
+            <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Market Added</p><p class="font-bold text-emerald-300" id="ret-growth">—</p></div>
+            <div class="bg-slate-800 rounded p-2 col-span-2 text-center"><p class="text-slate-500">Monthly Income (4% Rule)</p><p class="font-bold text-lg" id="ret-mi">—</p></div>
+          </div>
+          <p class="text-xs text-slate-400 italic" id="ret-lesson"></p>
+        </div>
+      </div>
+      <div class="lg:col-span-2 card"><h3 class="font-semibold mb-3">Balance vs. Contributions</h3><canvas id="chart-retirement" style="max-height:340px"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ─── AGENT ─────────────────────────────────── -->
+  <div id="page-agent" class="p-6 max-w-6xl mx-auto hidden">
+    <div class="flex items-center gap-3 mb-1">
+      <h1 class="text-2xl font-bold">🤖 MarketCompass Agent</h1>
+      <span class="badge bg-green text-xs">LIVE SCAN</span>
+    </div>
+    <p class="text-slate-400 text-sm mb-5">An intelligent brokerage agent that continuously scans stocks, ETFs, and the semiconductor sector for investment opportunities.</p>
+
+    <!-- Insights bar -->
+    <div id="agent-insights" class="card mb-5 text-sm text-slate-300 leading-relaxed"></div>
+
+    <!-- Filters -->
+    <div class="flex gap-2 mb-5 flex-wrap">
+      <button class="tab-btn active" id="ag-tab-ALL"         onclick="filterAgent('ALL')">All</button>
+      <button class="tab-btn" id="ag-tab-VALUE"       onclick="filterAgent('VALUE')">💎 Value</button>
+      <button class="tab-btn" id="ag-tab-INCOME"      onclick="filterAgent('INCOME')">💰 Income</button>
+      <button class="tab-btn" id="ag-tab-CHIP_SECTOR" onclick="filterAgent('CHIP_SECTOR')">💾 Semiconductors</button>
+      <button class="tab-btn" id="ag-tab-ETF"         onclick="filterAgent('ETF')">📊 ETF Efficiency</button>
+    </div>
+
+    <!-- Opportunity cards -->
+    <div id="agent-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+  </div>
+
+</main><!-- /main -->
+
+<!-- ══════════ STOCK / ETF DETAIL MODAL ══════════ -->
+<div id="detail-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal-box">
+    <div class="flex justify-between items-start mb-4">
+      <div id="modal-head"></div>
+      <button onclick="$('detail-modal').classList.add('hidden')" class="text-slate-500 hover:text-white text-xl ml-4">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ══════════ ADD HOLDING MODAL ══════════ -->
+<div id="add-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal-box" style="max-width:380px">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="font-bold text-lg">Add Holding</h2>
+      <button onclick="$('add-modal').classList.add('hidden')" class="text-slate-500 hover:text-white text-xl">✕</button>
+    </div>
+    <div class="space-y-3">
+      <div><label class="text-xs text-slate-400 block mb-1">Ticker</label><input type="text" id="add-ticker" placeholder="e.g. AAPL" class="w-full" style="text-transform:uppercase"/></div>
+      <div><label class="text-xs text-slate-400 block mb-1">Type</label><select id="add-type" class="w-full"><option value="STOCK">Stock</option><option value="ETF">ETF</option></select></div>
+      <div><label class="text-xs text-slate-400 block mb-1">Shares</label><input type="number" id="add-shares" placeholder="10" class="w-full" step="0.001"/></div>
+      <div><label class="text-xs text-slate-400 block mb-1">Avg Cost Basis ($/share)</label><input type="number" id="add-cost" placeholder="150.00" class="w-full" step="0.01"/></div>
+      <div class="flex gap-2 pt-1">
+        <button class="btn btn-primary flex-1" onclick="addHolding()">Add</button>
+        <button class="btn btn-ghost" onclick="$('add-modal').classList.add('hidden')">Cancel</button>
+      </div>
+      <p class="text-xs text-slate-600">Tickers in our database auto-populate current price and dividend data.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ JAVASCRIPT ══════════════════ -->
+<script>
+// ──── utils ────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmt  = n => '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n => (n>=0?'+':'')+Number(n).toFixed(2)+'%';
+const fmtM = n => n>=1e12?'$'+(n/1e12).toFixed(1)+'T':n>=1e9?'$'+(n/1e9).toFixed(1)+'B':'$'+(n/1e6).toFixed(0)+'M';
+const cc   = n => n>=0?'#34d399':'#f87171';
+const cp   = n => n>=0?'pos':'neg';
+
+let charts = {};
+function killChart(id){ if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+const PALETTE = ['#10b981','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16','#ec4899','#6366f1'];
+
+async function api(url,opts={}){
+  const r = await fetch(url,{headers:{'Content-Type':'application/json'},...opts});
+  if(!r.ok) throw new Error(r.status);
+  if(r.status===204) return null;
+  return r.json();
+}
+
+// ──── navigation ───────────────────────────────────
+const PAGES = ['dashboard','stocks','chips','etfs','dividends','portfolio','calculator','agent'];
+function goTo(p){
+  PAGES.forEach(x=>{ $('page-'+x).classList.toggle('hidden',x!==p); $('nav-'+x).classList.toggle('active',x===p); });
+  if(p==='dashboard')   loadDashboard();
+  else if(p==='stocks') loadStocks();
+  else if(p==='chips')  loadChips();
+  else if(p==='etfs')   loadETFs();
+  else if(p==='dividends') loadDividends();
+  else if(p==='portfolio') loadPortfolio();
+  else if(p==='calculator'){ setCalcTab('compound'); calcCompound(); }
+  else if(p==='agent')  loadAgent();
+}
+
+// ──── dashboard ────────────────────────────────────
+async function loadDashboard(){
+  const s = await api('/api/portfolio/summary');
+  $('d-invested').textContent = fmt(s.totalInvested);
+  $('d-value').textContent    = fmt(s.currentValue);
+  $('d-gl').textContent       = fmt(s.gainLoss); $('d-gl').style.color = cc(s.gainLoss);
+  $('d-gl-pct').textContent   = fmtP(s.gainLossPercent); $('d-gl-pct').style.color = cc(s.gainLoss);
+  $('d-income').textContent   = fmt(s.annualDividendIncome);
+  $('d-monthly').textContent  = fmt(s.monthlyDividendIncome)+'/mo';
+  killChart('dash-sector');
+  const labels=Object.keys(s.sectorAllocation), vals=Object.values(s.sectorAllocation);
+  charts['dash-sector']=new Chart($('chart-dash-sector'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PALETTE,borderColor:'#0f172a',borderWidth:2}]},options:{plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}},cutout:'65%'}});
+  $('d-holdings').innerHTML=[...s.holdings].sort((a,b)=>b.marketValue-a.marketValue).map(h=>`
+    <div class="flex justify-between py-1.5 border-b border-slate-800 text-sm">
+      <div><span class="font-mono font-bold text-emerald-400 w-14 inline-block">${h.ticker}</span><span class="text-slate-500 text-xs">${h.type}</span></div>
+      <div class="text-right"><span class="font-semibold">${fmt(h.marketValue)}</span><span class="text-xs ml-2 ${cp(h.totalReturnPercent)}">${fmtP(h.totalReturnPercent)}</span></div>
+    </div>`).join('');
+}
+
+// ──── stocks ───────────────────────────────────────
+let allStocks=[];
+async function loadStocks(){
+  if(!allStocks.length) {
+    allStocks=await api('/api/stocks');
+    const sectors=[...new Set(allStocks.map(s=>s.sector))].sort();
+    $('stock-sector').innerHTML='<option value="">All Sectors</option>'+sectors.map(s=>`<option>${s}</option>`).join('');
+  }
+  filterStocks();
+}
+function filterStocks(){
+  const q=($('stock-search').value||'').toLowerCase(), sec=$('stock-sector').value;
+  renderStocksTable(allStocks.filter(s=>(!q||s.ticker.toLowerCase().includes(q)||s.companyName.toLowerCase().includes(q)||s.sector.toLowerCase().includes(q))&&(!sec||s.sector===sec)));
+}
+function renderStocksTable(stocks){
+  $('stocks-tbody').innerHTML=stocks.map(s=>`<tr onclick="showStockModal('${s.ticker}')" style="cursor:pointer">
+    <td><span class="font-mono font-bold text-emerald-400">${s.ticker}</span>${s.chipStock?'<span class="badge bg-blue text-xs ml-1">💾</span>':''}</td>
+    <td class="text-sm">${s.companyName}</td><td class="text-xs text-slate-400">${s.sector}</td>
+    <td class="font-mono">${fmt(s.currentPrice)}</td>
+    <td>${s.peRatio>0?s.peRatio.toFixed(1)+'×':'<span class="text-slate-600">—</span>'}</td>
+    <td class="${s.dividendYieldPercent>0?'pos font-semibold':'text-slate-600'}">${s.dividendYieldPercent>0?s.dividendYieldPercent.toFixed(2)+'%':'—'}</td>
+    <td class="${cp(s.oneYearReturnPercent)} font-semibold">${fmtP(s.oneYearReturnPercent)}</td>
+    <td>${s.beta.toFixed(2)}</td>
+    <td><span class="badge ${s.sizeCategory==='Mega-Cap'?'bg-purple':'bg-blue'}">${s.sizeCategory}</span></td>
+  </tr>`).join('');
+}
+
+// ──── chips ────────────────────────────────────────
+let allChips=[], chipTierFilter='all';
+async function loadChips(){
+  if(!allChips.length) allChips=await api('/api/stocks/chips');
+  filterChips();
+}
+function setChipTab(tab){
+  chipTierFilter=tab;
+  ['all','Mega-Cap,Large-Cap','Mid-Cap','Small-Cap'].forEach((v,i)=>{
+    const ids=['all','large','mid','small'];
+    $('chip-tab-'+ids[i]).classList.toggle('active',v===tab||ids[i]===tab);
+  });
+  filterChips();
+}
+function filterChips(){
+  const type=$('chip-type-filter').value;
+  let filtered=allChips.filter(s=>!type||s.chipType===type);
+  if(chipTierFilter!=='all'){
+    const tiers=chipTierFilter.split(',');
+    filtered=filtered.filter(s=>tiers.includes(s.sizeCategory));
+  }
+  renderChipsTable(filtered);
+}
+const chipBadge=t=>`<span class="badge chip-badge-${t||'FABLESS'} text-xs">${t||'—'}</span>`;
+function renderChipsTable(chips){
+  $('chips-tbody').innerHTML=chips.map(s=>`<tr onclick="showStockModal('${s.ticker}')" style="cursor:pointer">
+    <td><span class="font-mono font-bold text-emerald-400">${s.ticker}</span></td>
+    <td class="text-sm">${s.companyName}</td>
+    <td>${chipBadge(s.chipType)}</td>
+    <td class="font-mono text-xs">$${s.marketCapBillions.toFixed(0)}B</td>
+    <td class="font-mono">${fmt(s.currentPrice)}</td>
+    <td>${s.peRatio>0?s.peRatio.toFixed(1)+'×':'<span class="text-red-400 text-xs">Loss</span>'}</td>
+    <td class="${cp(s.oneYearReturnPercent)} font-semibold">${fmtP(s.oneYearReturnPercent)}</td>
+    <td class="neg">${s.percentFromHigh.toFixed(1)}%</td>
+    <td class="${s.dividendYieldPercent>0?'pos':'text-slate-600'}">${s.dividendYieldPercent>0?s.dividendYieldPercent.toFixed(2)+'%':'—'}</td>
+    <td><span class="badge ${s.sizeCategory==='Mega-Cap'||s.sizeCategory==='Large-Cap'?'bg-blue':s.sizeCategory==='Mid-Cap'?'bg-amber':'bg-red'} text-xs">${s.sizeCategory}</span></td>
+  </tr>`).join('');
+}
+
+// ──── ETFs ─────────────────────────────────────────
+let allETFs=[];
+async function loadETFs(){
+  if(!allETFs.length) allETFs=await api('/api/etfs');
+  filterETFs(); renderExpenseCmp();
+}
+const catBadge={BROAD_MARKET:'bg-green',SP500:'bg-blue',TECH:'bg-purple',DIVIDEND:'bg-amber',BOND:'bg-blue',INTERNATIONAL:'bg-blue',VALUE:'bg-amber',GROWTH:'bg-purple',REIT:'bg-amber'};
+function filterETFs(){
+  const cat=$('etf-category').value;
+  $('etfs-tbody').innerHTML=allETFs.filter(e=>!cat||e.category===cat).map(e=>`<tr onclick="showETFModal('${e.ticker}')" style="cursor:pointer">
+    <td><span class="font-mono font-bold text-emerald-400">${e.ticker}</span></td>
+    <td class="text-xs">${e.name}</td>
+    <td><span class="badge ${catBadge[e.category]||'bg-blue'} text-xs">${e.category.replace('_',' ')}</span></td>
+    <td class="font-mono">${fmt(e.currentPrice)}</td>
+    <td class="${e.expenseRatioPercent<=0.10?'pos font-bold':e.expenseRatioPercent<=0.30?'text-amber-400':'neg'}">${e.expenseRatioPercent.toFixed(4)}%</td>
+    <td>$${e.aumBillions.toFixed(0)}B</td><td class="text-slate-400">${e.holdingsCount.toLocaleString()}</td>
+    <td class="pos">${e.distributionYieldPercent.toFixed(2)}%</td>
+    <td class="${cp(e.oneYearReturnPercent)} font-semibold">${fmtP(e.oneYearReturnPercent)}</td>
+    <td class="${cp(e.fiveYearReturnPercent)}">${fmtP(e.fiveYearReturnPercent)}</td>
+    <td class="${cp(e.tenYearReturnPercent)}">${fmtP(e.tenYearReturnPercent)}</td>
+  </tr>`).join('');
+}
+function renderExpenseCmp(){
+  const cases=[{label:'Ultra-Low (0.03%)',r:0.03,ex:'VTI, VOO'},{label:'Low (0.20%)',r:0.20,ex:'QQQ'},{label:'High (0.50%)',r:0.50,ex:'Active funds'}];
+  $('expense-comparison').innerHTML=cases.map((c,i)=>{
+    const net=10000*Math.pow(1+0.07-c.r/100,30), cost=10000*Math.pow(1.07,30)-net;
+    return `<div class="bg-slate-800 rounded-xl p-4 ${i===0?'border border-emerald-700':''}">
+      <p class="text-xs text-slate-400">${c.label}</p><p class="text-xs text-emerald-400 font-mono">${c.ex}</p>
+      <p class="text-2xl font-bold mt-2">${fmt(net)}</p>
+      <p class="text-xs neg mt-1">Fees cost: ${fmt(cost)}</p><p class="text-xs text-slate-500">over 30 years</p></div>`;
+  }).join('');
+}
+
+// ──── dividends ────────────────────────────────────
+let allDivs=[], divTab='all';
+async function loadDividends(){
+  if(!allDivs.length) allDivs=await api('/api/dividends');
+  setDivTab(divTab);
+}
+async function setDivTab(tab){
+  divTab=tab;
+  ['all','kings','aristocrats','monthly'].forEach(t=>$('div-tab-'+t).classList.toggle('active',t===tab));
+  let data=allDivs;
+  if(tab==='kings') data=await api('/api/dividends/kings');
+  else if(tab==='aristocrats') data=await api('/api/dividends/aristocrats');
+  else if(tab==='monthly') data=await api('/api/dividends/monthly');
+  $('divs-tbody').innerHTML=data.map(d=>{
+    const badge=d.dividendKing?'<span class="badge bg-amber">👑 King</span>':d.dividendAristocrat?'<span class="badge bg-green">🏅 Aristocrat</span>':d.paymentFrequency==='MONTHLY'?'<span class="badge bg-purple">📅 Monthly</span>':'';
+    const pc=d.payoutRatioPercent<60?'pos':d.payoutRatioPercent<80?'text-amber-400':'neg';
+    return `<tr>
+      <td><span class="font-mono font-bold text-emerald-400">${d.ticker}</span></td>
+      <td class="text-sm">${d.companyName}</td><td class="text-xs text-slate-400">${d.sector}</td>
+      <td class="font-mono">${fmt(d.currentPrice)}</td>
+      <td class="font-semibold">${fmt(d.annualDividendPerShare)}</td>
+      <td class="pos font-bold">${d.dividendYieldPercent.toFixed(2)}%</td>
+      <td class="text-xs text-slate-400">${d.paymentFrequency.replace('_',' ')}</td>
+      <td class="${pc} font-semibold">${d.payoutRatioPercent.toFixed(0)}%</td>
+      <td class="font-semibold">${d.consecutiveYearsOfDividendGrowth} yrs</td>
+      <td class="pos">${d.fiveYearDividendGrowthRatePercent.toFixed(1)}%/yr</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+function estimateIncome(){
+  const inv=parseFloat($('div-inv').value)||10000, yld=parseFloat($('div-yld').value)||3.5;
+  const annual=inv*(yld/100);
+  $('div-income-result').innerHTML=`<span class="pos font-bold">${fmt(annual)}/yr</span> <span class="text-slate-500">·</span> <span class="text-slate-300">${fmt(annual/12)}/mo</span> <span class="text-slate-500 text-xs ml-1">on ${fmt(inv)} at ${yld}% yield</span>`;
+}
+
+// ──── portfolio ────────────────────────────────────
+async function loadPortfolio(){
+  const s=await api('/api/portfolio/summary');
+  $('p-invested').textContent=fmt(s.totalInvested);
+  $('p-value').textContent=fmt(s.currentValue);
+  $('p-gl').textContent=fmt(s.gainLoss); $('p-gl').style.color=cc(s.gainLoss);
+  $('p-gl-pct').textContent=fmtP(s.gainLossPercent); $('p-gl-pct').style.color=cc(s.gainLoss);
+  $('p-income').textContent=fmt(s.annualDividendIncome);
+  $('p-yield').textContent=s.portfolioYieldPercent.toFixed(2)+'% portfolio yield';
+  $('portfolio-tbody').innerHTML=s.holdings.map(h=>`<tr>
+    <td><span class="font-mono font-bold text-emerald-400">${h.ticker}</span></td>
+    <td><span class="badge ${h.type==='ETF'?'bg-blue':'bg-green'} text-xs">${h.type}</span></td>
+    <td class="font-mono">${h.shares}</td>
+    <td class="font-mono">${fmt(h.avgCostBasis)}</td>
+    <td class="font-mono">${fmt(h.currentPrice)}</td>
+    <td class="font-mono font-semibold">${fmt(h.marketValue)}</td>
+    <td class="${cp(h.unrealizedGainLoss)} font-semibold">${fmt(h.unrealizedGainLoss)}</td>
+    <td class="${cp(h.totalReturnPercent)} font-bold">${fmtP(h.totalReturnPercent)}</td>
+    <td class="pos text-xs">${h.yieldOnCost.toFixed(2)}%</td>
+    <td><button class="btn btn-danger py-1 px-2 text-xs" onclick="removeHolding('${h.ticker}')">✕</button></td>
+  </tr>`).join('');
+  killChart('port-sector');
+  const labels=Object.keys(s.sectorAllocation), vals=Object.values(s.sectorAllocation);
+  charts['port-sector']=new Chart($('chart-port-sector'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PALETTE,borderColor:'#0f172a',borderWidth:2}]},options:{plugins:{legend:{display:false}},cutout:'60%'}});
+  $('port-sector-legend').innerHTML=labels.map((l,i)=>`<div class="flex justify-between"><span style="color:${PALETTE[i]}">● ${l}</span><span class="text-slate-400">${vals[i]}%</span></div>`).join('');
+}
+async function addHolding(){
+  const ticker=$('add-ticker').value.trim().toUpperCase(), type=$('add-type').value;
+  const shares=parseFloat($('add-shares').value), avgCostBasis=parseFloat($('add-cost').value);
+  if(!ticker||!shares||!avgCostBasis) return alert('Please fill all fields.');
+  await api('/api/portfolio/holdings',{method:'POST',body:JSON.stringify({ticker,type,shares,avgCostBasis})});
+  $('add-modal').classList.add('hidden');
+  ['add-ticker','add-shares','add-cost'].forEach(id=>$(id).value='');
+  await loadPortfolio();
+}
+async function removeHolding(ticker){
+  if(!confirm('Remove '+ticker+' from portfolio?')) return;
+  await api('/api/portfolio/holdings/'+ticker,{method:'DELETE'});
+  await loadPortfolio();
+}
+function quickAdd(ticker,type){ $('add-ticker').value=ticker; $('add-type').value=type; $('detail-modal').classList.add('hidden'); $('add-modal').classList.remove('hidden'); }
+
+// ──── stock detail modal ───────────────────────────
+function showStockModal(ticker){
+  const s=allStocks.find(x=>x.ticker===ticker)||allChips.find(x=>x.ticker===ticker);
+  if(!s) return;
+  const rng=((s.currentPrice-s.fiftyTwoWeekLow)/(s.fiftyTwoWeekHigh-s.fiftyTwoWeekLow)*100).toFixed(0);
+  $('modal-head').innerHTML=`<div class="flex items-center gap-2 flex-wrap">
+    <span class="font-mono font-bold text-emerald-400 text-xl">${s.ticker}</span>
+    <span class="badge bg-blue">${s.sector}</span>
+    ${s.chipType?chipBadge(s.chipType):''}
+    ${s.dividendYieldPercent>0?'<span class="badge bg-green">Pays Dividend</span>':''}
+  </div><p class="font-semibold mt-1">${s.companyName}</p>`;
+  $('modal-body').innerHTML=`
+    <div class="flex justify-between mb-3">
+      <div><p class="text-3xl font-bold">${fmt(s.currentPrice)}</p><p class="${cp(s.oneYearReturnPercent)} text-sm">${fmtP(s.oneYearReturnPercent)} (1Y)</p></div>
+      <div class="text-right text-sm text-slate-400"><p>Market Cap: <span class="text-white font-semibold">$${s.marketCapBillions.toFixed(0)}B</span></p><p class="mt-0.5">${s.sizeCategory}</p></div>
+    </div>
+    <p class="text-slate-300 text-sm mb-3">${s.description}</p>
+    <div class="info-box mb-3"><p class="text-emerald-300 text-xs font-semibold mb-1">💡 Investment Note</p><p class="text-slate-300 text-sm">${s.investmentNote}</p></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">P/E Ratio</p><p class="font-bold text-lg">${s.peRatio>0?s.peRatio.toFixed(1)+'×':'Loss'}</p><p class="text-xs text-slate-500">${s.peRatio>0&&s.peRatio<15?'🟢 Cheap':s.peRatio<25?'🟡 Fair':s.peRatio<40?'🟠 Pricey':'🔴 Very high'}</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Div. Yield</p><p class="font-bold text-lg ${s.dividendYieldPercent>0?'pos':'text-slate-500'}">${s.dividendYieldPercent>0?s.dividendYieldPercent.toFixed(2)+'%':'—'}</p><p class="text-xs text-slate-500">${s.dividendYieldPercent>0?fmt(s.annualDividendPerShare)+'/yr':'No dividend'}</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Beta</p><p class="font-bold text-lg">${s.beta.toFixed(2)}</p><p class="text-xs text-slate-500">${s.beta<0.8?'🟢 Low vol':s.beta<1.2?'🟡 Market-like':'🔴 High vol'}</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">From 52W High</p><p class="font-bold text-lg neg">-${s.percentFromHigh.toFixed(1)}%</p><p class="text-xs text-slate-500">below peak</p></div>
+    </div>
+    <div class="bg-slate-800 rounded-lg p-3 mb-3">
+      <p class="text-slate-400 text-xs mb-1.5">52-Week Range: ${fmt(s.fiftyTwoWeekLow)} — ${fmt(s.fiftyTwoWeekHigh)}</p>
+      <div class="range-bar"><div class="range-fill" style="width:${rng}%"></div></div>
+      <p class="text-xs text-slate-500 mt-1">Current is at ${rng}% of 52W range</p>
+    </div>
+    <button onclick="quickAdd('${s.ticker}','STOCK')" class="btn btn-primary w-full">+ Add to Portfolio</button>`;
+  $('detail-modal').classList.remove('hidden');
+}
+
+function showETFModal(ticker){
+  const e=allETFs.find(x=>x.ticker===ticker); if(!e) return;
+  const cost=(10000*e.expenseRatioPercent/100).toFixed(2);
+  $('modal-head').innerHTML=`<div class="flex items-center gap-2 flex-wrap">
+    <span class="font-mono font-bold text-emerald-400 text-xl">${e.ticker}</span>
+    <span class="badge ${catBadge[e.category]||'bg-blue'}">${e.category.replace('_',' ')}</span>
+  </div><p class="text-slate-400 text-xs mt-1">${e.name} · ${e.issuer}</p>`;
+  $('modal-body').innerHTML=`
+    <div class="flex justify-between mb-3">
+      <div><p class="text-3xl font-bold">${fmt(e.currentPrice)}</p><p class="text-slate-400 text-xs mt-1">Index: ${e.indexTracked}</p></div>
+      <div class="text-right"><p class="text-slate-400 text-xs">AUM</p><p class="font-bold">$${e.aumBillions.toFixed(0)}B</p><p class="text-xs text-slate-400">${e.holdingsCount.toLocaleString()} holdings</p></div>
+    </div>
+    <p class="text-slate-300 text-sm mb-3">${e.description}</p>
+    <div class="info-box mb-3"><p class="text-emerald-300 text-xs font-semibold mb-1">💡 Investment Note</p><p class="text-slate-300 text-sm">${e.investmentNote}</p></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Expense Ratio</p><p class="font-bold text-lg ${e.expenseRatioPercent<=0.10?'pos':'text-amber-400'}">${e.expenseRatioPercent.toFixed(4)}%</p><p class="text-xs text-slate-500">${e.expenseRatingLabel}</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Cost/$10k/yr</p><p class="font-bold text-lg">$${cost}</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">Yield</p><p class="font-bold text-lg pos">${e.distributionYieldPercent.toFixed(2)}%</p></div>
+      <div class="bg-slate-800 rounded-lg p-3 text-center"><p class="text-slate-400 text-xs">1Y / 5Y / 10Y</p><p class="font-semibold text-sm pos">${fmtP(e.oneYearReturnPercent)}</p><p class="text-xs text-slate-400">${fmtP(e.fiveYearReturnPercent)} / ${fmtP(e.tenYearReturnPercent)}</p></div>
+    </div>
+    <button onclick="quickAdd('${e.ticker}','ETF')" class="btn btn-primary w-full">+ Add to Portfolio</button>`;
+  $('detail-modal').classList.remove('hidden');
+}
+
+// ──── calculator ───────────────────────────────────
+function setCalcTab(tab){
+  ['compound','drip','retirement'].forEach(t=>{ $('calc-'+t).classList.toggle('hidden',t!==tab); $('calc-tab-'+t).classList.toggle('active',t===tab); });
+}
+const chartCfg=(labels,datasets)=>({data:{labels,datasets},options:{plugins:{legend:{labels:{color:'#94a3b8'}}},scales:{x:{ticks:{color:'#64748b',maxTicksLimit:10},grid:{color:'#1e293b'}},y:{ticks:{color:'#64748b',callback:v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+(v/1000).toFixed(0)+'K'},grid:{color:'#1e293b'}}}}});
+
+async function calcCompound(){
+  const p=+$('ci-principal').value||10000,r=+$('ci-rate').value||7,y=+$('ci-years').value||30,c=+$('ci-compounds').value||12;
+  const d=await api(`/api/calculator/compound?principal=${p}&rate=${r}&years=${y}&compounds=${c}`);
+  $('ci-final').textContent=fmt(d.finalAmount); $('ci-interest').textContent=fmt(d.totalInterest);
+  $('ci-multiplied').textContent=d.moneyMultiplied.toFixed(1)+'×'; $('ci-rule72').textContent=d.rule72Years.toFixed(1)+' years';
+  $('ci-lesson').textContent=d.lesson; $('ci-result').classList.remove('hidden');
+  killChart('compound');
+  const labels=d.yearlyData.map(x=>'Yr '+x.year);
+  charts['compound']=new Chart($('chart-compound'),{type:'line',...chartCfg(labels,[
+    {label:'Portfolio Value',data:d.yearlyData.map(x=>x.value),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.4,pointRadius:0},
+    {label:'Principal',data:d.yearlyData.map(()=>p),borderColor:'#475569',borderDash:[5,5],pointRadius:0}
+  ])});
+}
+async function calcDRIP(){
+  const inv=+$('drip-inv').value||10000,yld=+$('drip-yield').value||3.5,dg=+$('drip-dg').value||6,pg=+$('drip-pg').value||7,y=+$('drip-years').value||25;
+  const d=await api(`/api/calculator/drip?investment=${inv}&yield=${yld}&dividendGrowth=${dg}&priceGrowth=${pg}&years=${y}`);
+  $('drip-final').textContent=fmt(d.finalValueWithDRIP); $('drip-nodrip').textContent=fmt(d.finalValueWithoutDRIP);
+  $('drip-adv').textContent=fmt(d.dripAdvantage); $('drip-total').textContent=fmt(d.totalDividendsReinvested);
+  $('drip-lesson').textContent=d.lesson; $('drip-result').classList.remove('hidden');
+  killChart('drip');
+  const labels=d.yearlyData.map(x=>'Yr '+x.year);
+  const noDripData=d.yearlyData.map((_,i)=>inv*Math.pow(1+pg/100,i));
+  charts['drip']=new Chart($('chart-drip'),{type:'line',...chartCfg(labels,[
+    {label:'With DRIP',data:d.yearlyData.map(x=>x.portfolioValue),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.15)',fill:true,tension:.4,pointRadius:0},
+    {label:'Without DRIP',data:noDripData,borderColor:'#f59e0b',borderDash:[5,5],tension:.4,pointRadius:0}
+  ])});
+}
+async function calcRetirement(){
+  const m=+$('ret-monthly').value||500,r=+$('ret-rate').value||7,y=+$('ret-years').value||30,init=+$('ret-init').value||0;
+  const d=await api(`/api/calculator/retirement?monthly=${m}&rate=${r}&years=${y}&initial=${init}`);
+  $('ret-final').textContent=fmt(d.finalBalance); $('ret-contrib').textContent=fmt(d.totalContributed);
+  $('ret-growth').textContent=fmt(d.totalGrowth); $('ret-mi').textContent=fmt(d.monthlyRetirementIncome4PctRule)+'/mo';
+  $('ret-lesson').textContent=d.lesson; $('ret-result').classList.remove('hidden');
+  killChart('retirement');
+  const labels=d.yearlyData.map(x=>'Yr '+x.year);
+  charts['retirement']=new Chart($('chart-retirement'),{type:'line',...chartCfg(labels,[
+    {label:'Balance',data:d.yearlyData.map(x=>x.balance),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.15)',fill:true,tension:.4,pointRadius:0},
+    {label:'Contributed',data:d.yearlyData.map(x=>x.contributed),borderColor:'#3b82f6',borderDash:[5,5],tension:.4,pointRadius:0},
+    {label:'Growth',data:d.yearlyData.map(x=>x.growth),borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.1)',fill:true,tension:.4,pointRadius:0}
+  ])});
+}
+
+// ──── agent ────────────────────────────────────────
+let allOpps=[];
+async function loadAgent(){
+  const [opps,insights]=await Promise.all([api('/api/agent/opportunities'),api('/api/agent/insights')]);
+  allOpps=opps;
+  $('agent-insights').innerHTML=`<p>${insights.agentNarrative}</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-xs">
+      <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Stocks Tracked</p><p class="font-bold">${insights.totalStocksTracked}</p></div>
+      <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">ETFs Tracked</p><p class="font-bold">${insights.totalETFsTracked}</p></div>
+      <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Chip Stocks</p><p class="font-bold">${insights.totalChipStocksTracked}</p></div>
+      <div class="bg-slate-800 rounded p-2 text-center"><p class="text-slate-500">Avg Chip P/E</p><p class="font-bold">${insights.avgSemiconductorPE}×</p></div>
+    </div>`;
+  filterAgent('ALL');
+}
+
+function filterAgent(type){
+  ['ALL','VALUE','INCOME','CHIP_SECTOR','ETF'].forEach(t=>$('ag-tab-'+t).classList.toggle('active',t===type));
+  const filtered=type==='ALL'?allOpps:allOpps.filter(o=>o.opportunityType===type);
+  const typeIcon={VALUE:'💎',INCOME:'💰',CHIP_SECTOR:'💾',ETF:'📊'};
+  const sigLabel={STRONG_BUY:'STRONG BUY',BUY:'BUY',WATCH:'WATCH',HOLD:'HOLD'};
+  $('agent-cards').innerHTML=filtered.map(o=>`
+    <div class="card flex flex-col gap-3">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-emerald-400 text-lg">${o.ticker}</span>
+            <span class="badge signal-${o.signal} text-xs">${o.signalEmoji} ${sigLabel[o.signal]||o.signal}</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">${o.companyName}</p>
+        </div>
+        <div class="text-right">
+          <span class="badge bg-blue text-xs">${typeIcon[o.opportunityType]||''} ${o.opportunityType.replace('_',' ')}</span>
+          <p class="text-slate-400 text-xs mt-1">${fmt(o.currentPrice)}</p>
+        </div>
+      </div>
+      <!-- Score bar -->
+      <div>
+        <div class="flex justify-between text-xs text-slate-400 mb-1"><span>Agent Score</span><span class="font-bold text-white">${o.score}/100</span></div>
+        <div class="score-bar"><div class="score-fill" style="width:${o.score}%"></div></div>
+      </div>
+      <!-- Key points -->
+      <ul class="text-xs text-slate-300 space-y-1">
+        ${(o.keyPoints||[]).slice(0,3).map(p=>`<li class="flex gap-1.5"><span class="text-emerald-500 mt-0.5 flex-shrink-0">▸</span><span>${p}</span></li>`).join('')}
+      </ul>
+      <!-- Reasoning (collapsed) -->
+      <details class="text-xs text-slate-400 cursor-pointer">
+        <summary class="text-emerald-400 font-medium select-none">Agent reasoning ↓</summary>
+        <p class="mt-2 leading-relaxed">${o.reasoning}</p>
+      </details>
+      ${o.opportunityType!=='ETF'?`<button onclick="showStockModal('${o.ticker}')" class="btn btn-ghost text-xs py-1.5">View Details</button>`:''}
+    </div>`).join('');
+}
+
+// ──── init ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>goTo('dashboard'));
+</script>
+</body>
+</html>

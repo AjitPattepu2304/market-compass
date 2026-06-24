@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: market-compass
+
+server:
+  port: 8080
+
+# Cassandra is excluded via @SpringBootApplication(exclude = ...) in the main class.
+# Add connection details here if you wire up a real Cassandra instance later.
