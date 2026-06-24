@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: market-compass
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8080
+    healthCheckPath: /api/stocks

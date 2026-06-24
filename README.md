@@ -11,7 +11,7 @@ Includes a virtual paper-trading wallet and an AI-style brokerage agent.
 |---|---|
 | **GitHub Repo** | https://github.com/AjitPattepu2304/market-compass |
 | **Local App** | http://localhost:8080 |
-| **Render (Beta Deploy)** | _coming soon_ |
+| **Render (Beta Deploy)** | https://market-compass.onrender.com _(live after first deploy)_ |
 
 ---
 
