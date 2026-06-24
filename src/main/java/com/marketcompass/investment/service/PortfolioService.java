@@ -80,6 +80,10 @@ public class PortfolioService {
         return holdings.remove(ticker.toUpperCase()) != null;
     }
 
+    public Optional<PortfolioHolding> getHoldingByTicker(String ticker) {
+        return Optional.ofNullable(holdings.get(ticker.toUpperCase()));
+    }
+
     public Map<String, Object> getSummary() {
         List<PortfolioHolding> list = getHoldings();
 
