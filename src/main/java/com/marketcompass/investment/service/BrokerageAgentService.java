@@ -1,9 +1,9 @@
-package com.product_office_setup.product_office_setup.investment.service;
+package com.marketcompass.investment.service;
 
-import com.product_office_setup.product_office_setup.investment.model.Dividend;
-import com.product_office_setup.product_office_setup.investment.model.ETF;
-import com.product_office_setup.product_office_setup.investment.model.Opportunity;
-import com.product_office_setup.product_office_setup.investment.model.Stock;
+import com.marketcompass.investment.model.Dividend;
+import com.marketcompass.investment.model.ETF;
+import com.marketcompass.investment.model.Opportunity;
+import com.marketcompass.investment.model.Stock;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

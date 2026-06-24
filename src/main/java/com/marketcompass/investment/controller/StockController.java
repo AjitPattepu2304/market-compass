@@ -1,7 +1,7 @@
-package com.product_office_setup.product_office_setup.investment.controller;
+package com.marketcompass.investment.controller;
 
-import com.product_office_setup.product_office_setup.investment.model.Stock;
-import com.product_office_setup.product_office_setup.investment.service.StockService;
+import com.marketcompass.investment.model.Stock;
+import com.marketcompass.investment.service.StockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

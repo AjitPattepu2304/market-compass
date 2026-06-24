@@ -1,4 +1,4 @@
-package com.product_office_setup.product_office_setup.investment.service;
+package com.marketcompass.investment.service;
 
 import org.springframework.stereotype.Service;
 

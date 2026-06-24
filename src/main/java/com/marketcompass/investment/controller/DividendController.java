@@ -1,7 +1,7 @@
-package com.product_office_setup.product_office_setup.investment.controller;
+package com.marketcompass.investment.controller;
 
-import com.product_office_setup.product_office_setup.investment.model.Dividend;
-import com.product_office_setup.product_office_setup.investment.service.DividendService;
+import com.marketcompass.investment.model.Dividend;
+import com.marketcompass.investment.service.DividendService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

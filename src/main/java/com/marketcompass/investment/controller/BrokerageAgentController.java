@@ -1,7 +1,7 @@
-package com.product_office_setup.product_office_setup.investment.controller;
+package com.marketcompass.investment.controller;
 
-import com.product_office_setup.product_office_setup.investment.model.Opportunity;
-import com.product_office_setup.product_office_setup.investment.service.BrokerageAgentService;
+import com.marketcompass.investment.model.Opportunity;
+import com.marketcompass.investment.service.BrokerageAgentService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

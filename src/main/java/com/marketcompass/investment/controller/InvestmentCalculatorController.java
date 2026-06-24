@@ -1,6 +1,6 @@
-package com.product_office_setup.product_office_setup.investment.controller;
+package com.marketcompass.investment.controller;
 
-import com.product_office_setup.product_office_setup.investment.service.InvestmentCalculatorService;
+import com.marketcompass.investment.service.InvestmentCalculatorService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;

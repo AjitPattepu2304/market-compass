@@ -1,7 +1,7 @@
-package com.product_office_setup.product_office_setup.investment.controller;
+package com.marketcompass.investment.controller;
 
-import com.product_office_setup.product_office_setup.investment.model.ETF;
-import com.product_office_setup.product_office_setup.investment.service.ETFService;
+import com.marketcompass.investment.model.ETF;
+import com.marketcompass.investment.service.ETFService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

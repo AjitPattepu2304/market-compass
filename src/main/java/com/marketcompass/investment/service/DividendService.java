@@ -1,6 +1,6 @@
-package com.product_office_setup.product_office_setup.investment.service;
+package com.marketcompass.investment.service;
 
-import com.product_office_setup.product_office_setup.investment.model.Dividend;
+import com.marketcompass.investment.model.Dividend;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 

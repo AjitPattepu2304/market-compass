@@ -1,4 +1,4 @@
-package com.product_office_setup.product_office_setup.investment.model;
+package com.marketcompass.investment.model;
 
 /**
  * Dividend information for a stock.
