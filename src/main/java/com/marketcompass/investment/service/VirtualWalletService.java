@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.LinkedHashSet;
 
 /**
  * Manages the virtual paper-trading wallet.
@@ -22,6 +23,7 @@ public class VirtualWalletService {
 
     private VirtualWallet wallet;
     private final List<TradeRecord> tradeHistory = new ArrayList<>();
+    private final Set<String> walletTickers = new LinkedHashSet<>(); // only tickers bought via wallet
     private long tradeCounter = 0;
 
     private final StockService stockService;
@@ -71,6 +73,7 @@ public class VirtualWalletService {
         wallet.debit(total);
 
         // Update or create holding in portfolio
+        walletTickers.add(t);
         updateHoldingOnBuy(t, shares, price);
 
         TradeRecord record = TradeRecord.builder()
@@ -130,6 +133,10 @@ public class VirtualWalletService {
 
         wallet.credit(proceeds, costBasis);
         updateHoldingOnSell(t, sharesToSell, holding);
+        // remove ticker from wallet tracking if fully sold
+        portfolioService.getHoldingByTicker(t).ifPresentOrElse(
+            h -> {}, () -> walletTickers.remove(t)
+        );
 
         TradeRecord record = TradeRecord.builder()
                 .id(nextTradeId())
@@ -200,8 +207,11 @@ public class VirtualWalletService {
     }
 
     private void refreshPortfolioValue() {
-        double total = portfolioService.getHoldings().stream()
-                .mapToDouble(PortfolioHolding::getMarketValue)
+        // Only count holdings purchased through the wallet — not seeded demo data
+        double total = walletTickers.stream()
+                .map(t -> portfolioService.getHoldingByTicker(t))
+                .filter(Optional::isPresent)
+                .mapToDouble(opt -> opt.get().getMarketValue())
                 .sum();
         wallet.setTotalPortfolioValue(total);
     }

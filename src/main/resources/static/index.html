@@ -65,6 +65,8 @@
     <div class="nav-link" id="nav-dividends"   onclick="goTo('dividends')">💰 Dividends</div>
     <p class="px-4 pt-3 pb-1 text-xs font-semibold text-slate-600 uppercase tracking-wider">Tools</p>
     <div class="nav-link" id="nav-portfolio"   onclick="goTo('portfolio')">💼 Portfolio</div>
+    <div class="nav-link" id="nav-wallet"      onclick="goTo('wallet')">💳 Wallet</div>
+    <div class="nav-link" id="nav-watchlist"   onclick="goTo('watchlist')">👁️ Watchlist</div>
     <div class="nav-link" id="nav-calculator"  onclick="goTo('calculator')">🧮 Calculator</div>
     <div class="nav-link" id="nav-agent"       onclick="goTo('agent')">🤖 Agent</div>
   </nav>
@@ -357,6 +359,95 @@
     <div id="agent-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
   </div>
 
+
+  <!-- ─── WALLET ─────────────────────────────────── -->
+  <div id="page-wallet" class="p-6 max-w-5xl mx-auto hidden">
+    <h1 class="text-2xl font-bold mb-1">💳 Virtual Wallet</h1>
+    <p class="text-slate-400 text-sm mb-5">Paper-trading account — $25,000 starting balance. No real money.</p>
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+      <div class="card"><p class="text-slate-400 text-xs font-medium">AVAILABLE CASH</p><p class="text-2xl font-bold text-emerald-400 mt-1" id="w-cash">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">INVESTED</p><p class="text-2xl font-bold mt-1" id="w-invested">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">PORTFOLIO VALUE</p><p class="text-2xl font-bold mt-1" id="w-pv">—</p></div>
+      <div class="card"><p class="text-slate-400 text-xs font-medium">TOTAL RETURN</p><p class="text-2xl font-bold mt-1" id="w-return">—</p></div>
+    </div>
+
+    <!-- Trade form -->
+    <div class="card mb-5">
+      <h3 class="font-semibold mb-3">Place Trade</h3>
+      <div class="flex flex-wrap gap-3 items-end">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Ticker</label>
+          <input id="w-ticker" placeholder="AAPL" style="width:100px" oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Shares</label>
+          <input id="w-shares" type="number" placeholder="5" style="width:90px"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">$ Amount (SIP)</label>
+          <input id="w-amount" type="number" placeholder="500" style="width:110px"/>
+        </div>
+        <button class="btn btn-primary" onclick="walletBuy()">BUY</button>
+        <button class="btn btn-danger" onclick="walletSell()">SELL</button>
+      </div>
+      <p class="text-xs text-slate-500 mt-2">Enter shares OR $ amount. $ amount = fractional shares (SIP-style).</p>
+      <p id="w-msg" class="text-xs mt-2"></p>
+    </div>
+
+    <!-- Trade history -->
+    <div class="card">
+      <h3 class="font-semibold mb-3">Trade History <span class="text-slate-500 font-normal text-xs" id="w-trade-count"></span></h3>
+      <div id="w-history"><p class="text-slate-500 text-sm">No trades yet.</p></div>
+    </div>
+  </div>
+
+  <!-- ─── WATCHLIST ──────────────────────────────── -->
+  <div id="page-watchlist" class="p-6 max-w-5xl mx-auto hidden">
+    <h1 class="text-2xl font-bold mb-1">👁️ Watchlist</h1>
+    <p class="text-slate-400 text-sm mb-5">Track tickers you're monitoring for entry opportunities.</p>
+
+    <!-- Add form -->
+    <div class="card mb-5">
+      <h3 class="font-semibold mb-3">Add to Watchlist</h3>
+      <div class="flex flex-wrap gap-3 items-end">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Ticker</label>
+          <input id="wl-ticker" placeholder="NVDA" style="width:100px" oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Target Price $</label>
+          <input id="wl-target" type="number" placeholder="0 = off" style="width:110px"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">Alert on Drop %</label>
+          <input id="wl-alert" type="number" placeholder="5" style="width:110px"/>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label class="text-xs text-slate-400 block mb-1">Notes</label>
+          <input id="wl-notes" placeholder="Why watching..." style="width:100%"/>
+        </div>
+        <button class="btn btn-primary" onclick="watchlistAdd()">+ Watch</button>
+      </div>
+      <p id="wl-msg" class="text-xs mt-2"></p>
+    </div>
+
+    <!-- Alerts -->
+    <div id="wl-alerts-section" class="mb-4 hidden">
+      <div class="info-box mb-4">
+        <p class="text-xs font-semibold text-amber-400 mb-2">🔔 Active Alerts</p>
+        <div id="wl-alerts"></div>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div class="card">
+      <h3 class="font-semibold mb-3">Watching <span class="text-slate-500 font-normal text-xs" id="wl-count"></span></h3>
+      <div id="wl-list"><p class="text-slate-500 text-sm">Nothing on your watchlist yet.</p></div>
+    </div>
+  </div>
+
 </main><!-- /main -->
 
 <!-- ══════════ STOCK / ETF DETAIL MODAL ══════════ -->
@@ -414,7 +505,7 @@ async function api(url,opts={}){
 }
 
 // ──── navigation ───────────────────────────────────
-const PAGES = ['dashboard','stocks','chips','etfs','dividends','portfolio','calculator','agent'];
+const PAGES = ['dashboard','stocks','chips','etfs','dividends','portfolio','wallet','watchlist','calculator','agent'];
 function goTo(p){
   PAGES.forEach(x=>{ $('page-'+x).classList.toggle('hidden',x!==p); $('nav-'+x).classList.toggle('active',x===p); });
   if(p==='dashboard')   loadDashboard();
@@ -423,6 +514,8 @@ function goTo(p){
   else if(p==='etfs')   loadETFs();
   else if(p==='dividends') loadDividends();
   else if(p==='portfolio') loadPortfolio();
+  else if(p==='wallet')    loadWallet();
+  else if(p==='watchlist') loadWatchlist();
   else if(p==='calculator'){ setCalcTab('compound'); calcCompound(); }
   else if(p==='agent')  loadAgent();
 }
@@ -779,6 +872,125 @@ function filterAgent(type){
       </details>
       ${o.opportunityType!=='ETF'?`<button onclick="showStockModal('${o.ticker}')" class="btn btn-ghost text-xs py-1.5">View Details</button>`:''}
     </div>`).join('');
+}
+
+// ──── WALLET ───────────────────────────────────────
+async function loadWallet() {
+  const data = await fetch('/api/wallet').then(r=>r.json());
+  const gl = data.totalAccountValue - data.startingBalance;
+  const pos = gl >= 0;
+  document.getElementById('w-cash').textContent = fmt(data.availableBalance);
+  document.getElementById('w-invested').textContent = fmt(data.investedAmount);
+  document.getElementById('w-pv').textContent = fmt(data.totalPortfolioValue);
+  document.getElementById('w-return').innerHTML = `<span class="${pos?'pos':'neg'}">${pos?'+':''}${data.totalReturnPercent}%</span>`;
+  document.getElementById('w-trade-count').textContent = `(${data.tradeCount} trades)`;
+
+  const history = await fetch('/api/wallet/history').then(r=>r.json());
+  const el = document.getElementById('w-history');
+  if (!history.length) { el.innerHTML='<p class="text-slate-500 text-sm">No trades yet.</p>'; return; }
+  el.innerHTML = `<table><thead><tr><th>ID</th><th>Side</th><th>Ticker</th><th>Shares</th><th>Price</th><th>Total</th><th>G/L</th><th>Source</th><th>Time</th></tr></thead><tbody>
+    ${history.slice().reverse().map(t=>`<tr>
+      <td class="text-slate-500">${t.id}</td>
+      <td><span class="badge ${t.side==='BUY'?'bg-green':'bg-red'}">${t.side}</span></td>
+      <td class="font-bold">${t.ticker}</td>
+      <td>${t.shares}</td>
+      <td>${fmt(t.executedPrice)}</td>
+      <td>${fmt(t.totalAmount)}</td>
+      <td class="${t.gainLoss>=0?'pos':'neg'}">${t.side==='SELL'?(t.gainLoss>=0?'+':'')+fmt(t.gainLoss):'—'}</td>
+      <td class="text-slate-400">${t.source}</td>
+      <td class="text-slate-400 text-xs">${t.executedAt}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+async function walletBuy() {
+  const ticker = document.getElementById('w-ticker').value.trim();
+  const shares = parseFloat(document.getElementById('w-shares').value);
+  const amount = parseFloat(document.getElementById('w-amount').value);
+  const msg = document.getElementById('w-msg');
+  if (!ticker) { msg.className='text-red-400'; msg.textContent='Enter a ticker.'; return; }
+
+  let url = '/api/wallet/buy', body = {ticker};
+  if (amount > 0) { url = '/api/wallet/buy/amount'; body.amount = amount; }
+  else if (shares > 0) { body.shares = shares; }
+  else { msg.className='text-red-400'; msg.textContent='Enter shares or $ amount.'; return; }
+
+  const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data = await res.json();
+  if (data.error) { msg.className='text-red-400'; msg.textContent=data.error; }
+  else { msg.className='text-emerald-400'; msg.textContent=`✓ Bought ${data.shares} ${data.ticker} @ ${fmt(data.executedPrice)}`; loadWallet(); }
+}
+
+async function walletSell() {
+  const ticker = document.getElementById('w-ticker').value.trim();
+  const shares = parseFloat(document.getElementById('w-shares').value);
+  const msg = document.getElementById('w-msg');
+  if (!ticker) { msg.className='text-red-400'; msg.textContent='Enter a ticker.'; return; }
+  if (!shares || shares <= 0) { msg.className='text-red-400'; msg.textContent='Enter shares to sell.'; return; }
+
+  const res = await fetch('/api/wallet/sell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,shares})});
+  const data = await res.json();
+  if (data.error) { msg.className='text-red-400'; msg.textContent=data.error; }
+  else {
+    const gl = data.gainLoss >= 0 ? `+${fmt(data.gainLoss)}` : fmt(data.gainLoss);
+    msg.className = data.gainLoss >= 0 ? 'text-emerald-400' : 'text-red-400';
+    msg.textContent = `✓ Sold ${data.shares} ${data.ticker} @ ${fmt(data.executedPrice)} | G/L: ${gl}`;
+    loadWallet();
+  }
+}
+
+// ──── WATCHLIST ─────────────────────────────────────
+async function loadWatchlist() {
+  const data = await fetch('/api/watchlist').then(r=>r.json());
+  document.getElementById('wl-count').textContent = `(${data.totalWatching})`;
+
+  const alerts = await fetch('/api/watchlist/alerts').then(r=>r.json());
+  const alertSec = document.getElementById('wl-alerts-section');
+  if (alerts.length) {
+    alertSec.classList.remove('hidden');
+    document.getElementById('wl-alerts').innerHTML = alerts.map(a=>`
+      <div class="flex justify-between items-center py-1 border-b border-slate-700 last:border-0">
+        <span class="font-bold text-sm">${a.ticker}</span>
+        <span class="text-xs">${fmt(a.currentPrice)}</span>
+        <span class="text-xs ${a.changeFromAddPercent>=0?'pos':'neg'}">${a.changeFromAddPercent>=0?'+':''}${a.changeFromAddPercent}%</span>
+        <span class="badge bg-amber text-xs">${a.atOrBelowTarget?'At Target':'Drop Alert'}</span>
+      </div>`).join('');
+  } else { alertSec.classList.add('hidden'); }
+
+  const el = document.getElementById('wl-list');
+  if (!data.items.length) { el.innerHTML='<p class="text-slate-500 text-sm">Nothing on your watchlist yet.</p>'; return; }
+  el.innerHTML = `<table><thead><tr><th>Ticker</th><th>Name</th><th>Type</th><th>Added Price</th><th>Current</th><th>Change</th><th>Target</th><th>Notes</th><th></th></tr></thead><tbody>
+    ${data.items.map(i=>`<tr>
+      <td class="font-bold">${i.ticker}</td>
+      <td class="text-slate-300">${i.assetName}</td>
+      <td><span class="badge ${i.assetType==='STOCK'?'bg-blue':'bg-purple'}">${i.assetType}</span></td>
+      <td>${fmt(i.priceAtAdd)}</td>
+      <td>${fmt(i.currentPrice)}</td>
+      <td class="${i.changeFromAddPercent>=0?'pos':'neg'}">${i.changeFromAddPercent>=0?'+':''}${i.changeFromAddPercent}%</td>
+      <td>${i.targetPrice>0?fmt(i.targetPrice):'—'}</td>
+      <td class="text-slate-400 text-xs">${i.notes||'—'}</td>
+      <td><button class="btn btn-danger text-xs py-1" onclick="watchlistRemove('${i.ticker}')">✕</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+async function watchlistAdd() {
+  const ticker = document.getElementById('wl-ticker').value.trim();
+  const targetPrice = parseFloat(document.getElementById('wl-target').value)||0;
+  const alertThreshold = parseFloat(document.getElementById('wl-alert').value)||0;
+  const notes = document.getElementById('wl-notes').value.trim();
+  const msg = document.getElementById('wl-msg');
+  if (!ticker) { msg.className='text-red-400'; msg.textContent='Enter a ticker.'; return; }
+
+  const res = await fetch('/api/watchlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker,targetPrice,alertThreshold,notes})});
+  const data = await res.json();
+  if (data.error) { msg.className='text-red-400'; msg.textContent=data.error; }
+  else { msg.className='text-emerald-400'; msg.textContent=`✓ Added ${data.ticker} @ ${fmt(data.priceAtAdd)}`; loadWatchlist(); }
+}
+
+async function watchlistRemove(ticker) {
+  await fetch(`/api/watchlist/${ticker}`,{method:'DELETE'});
+  loadWatchlist();
 }
 
 // ──── init ─────────────────────────────────────────
