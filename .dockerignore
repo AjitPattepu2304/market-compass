@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.iml
+.vscode
+
+# Maven build output (let Docker build do it)
+target/
+
+# Local dev overrides
+*.env
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs / extras
+*.md
+docs/

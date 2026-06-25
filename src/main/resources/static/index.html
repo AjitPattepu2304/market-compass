@@ -69,6 +69,8 @@
     <div class="nav-link" id="nav-watchlist"   onclick="goTo('watchlist')">👁️ Watchlist</div>
     <div class="nav-link" id="nav-calculator"  onclick="goTo('calculator')">🧮 Calculator</div>
     <div class="nav-link" id="nav-agent"       onclick="goTo('agent')">🤖 Agent</div>
+    <p class="px-4 pt-3 pb-1 text-xs font-semibold text-slate-600 uppercase tracking-wider">Live</p>
+    <div class="nav-link" id="nav-market"     onclick="goTo('market')">🕐 Market</div>
   </nav>
   <div class="p-4 border-t border-slate-800 text-xs text-slate-600">⚠️ Educational only.<br>Not financial advice.</div>
 </aside>
@@ -448,6 +450,55 @@
     </div>
   </div>
 
+  <!-- ─── MARKET ───────────────────────────────── -->
+  <div id="page-market" class="p-6 max-w-5xl mx-auto hidden">
+    <h1 class="text-2xl font-bold mb-1">🕐 Market</h1>
+    <p class="text-slate-400 text-sm mb-5">Live session status and simulated intraday price movements.</p>
+
+    <!-- Status card -->
+    <div class="card mb-5">
+      <div class="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-3xl" id="mkt-badge">⏳</span>
+            <div>
+              <div class="font-bold text-lg" id="mkt-label">Loading…</div>
+              <div class="text-slate-400 text-sm" id="mkt-time"></div>
+            </div>
+          </div>
+          <div class="text-slate-300 text-sm mt-1" id="mkt-comment"></div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs text-slate-500 mb-1">Next event</div>
+          <div class="font-semibold text-sm" id="mkt-next-label"></div>
+          <div class="text-emerald-400 font-bold" id="mkt-next-time"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direction bar (only when open) -->
+    <div id="mkt-direction-section" class="mb-5 hidden">
+      <div class="card">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl" id="mkt-dir-icon">↔️</span>
+          <div>
+            <div class="font-semibold text-sm" id="mkt-dir-label">Market direction</div>
+            <div class="text-slate-400 text-xs">Based on advancers vs. decliners</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Movers -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold">Top Movers <span class="text-slate-500 font-normal text-xs ml-1" id="mkt-movers-sub"></span></h3>
+        <button class="btn btn-ghost text-xs" onclick="loadMarket()">↻ Refresh</button>
+      </div>
+      <div id="mkt-movers"><p class="text-slate-500 text-sm">Loading…</p></div>
+    </div>
+  </div>
+
 </main><!-- /main -->
 
 <!-- ══════════ STOCK / ETF DETAIL MODAL ══════════ -->
@@ -505,7 +556,7 @@ async function api(url,opts={}){
 }
 
 // ──── navigation ───────────────────────────────────
-const PAGES = ['dashboard','stocks','chips','etfs','dividends','portfolio','wallet','watchlist','calculator','agent'];
+const PAGES = ['dashboard','stocks','chips','etfs','dividends','portfolio','wallet','watchlist','calculator','agent','market'];
 function goTo(p){
   PAGES.forEach(x=>{ $('page-'+x).classList.toggle('hidden',x!==p); $('nav-'+x).classList.toggle('active',x===p); });
   if(p==='dashboard')   loadDashboard();
@@ -518,6 +569,7 @@ function goTo(p){
   else if(p==='watchlist') loadWatchlist();
   else if(p==='calculator'){ setCalcTab('compound'); calcCompound(); }
   else if(p==='agent')  loadAgent();
+  else if(p==='market') loadMarket();
 }
 
 // ──── dashboard ────────────────────────────────────
@@ -991,6 +1043,72 @@ async function watchlistAdd() {
 async function watchlistRemove(ticker) {
   await fetch(`/api/watchlist/${ticker}`,{method:'DELETE'});
   loadWatchlist();
+}
+
+// ──── MARKET ────────────────────────────────────────
+async function loadMarket() {
+  const [status, movers] = await Promise.all([
+    fetch('/api/market/status').then(r=>r.json()),
+    fetch('/api/market/movers').then(r=>r.json())
+  ]);
+
+  // Status card
+  $('mkt-badge').textContent    = status.sessionBadge;
+  $('mkt-label').textContent    = status.sessionLabel;
+  $('mkt-time').textContent     = status.currentTimeET;
+  $('mkt-comment').textContent  = status.agentComment;
+  $('mkt-next-label').textContent = status.nextEventLabel;
+  $('mkt-next-time').textContent  = status.nextEventTime;
+
+  // Direction (only while open)
+  const dirSec = $('mkt-direction-section');
+  if (status.marketOpen) {
+    dirSec.classList.remove('hidden');
+    const icons = {UP:'📈',DOWN:'📉',MIXED:'↔️'};
+    const labels = {UP:'Market advancing — more gainers than losers',
+                    DOWN:'Market declining — more losers than gainers',
+                    MIXED:'Mixed session — roughly equal advancers/decliners'};
+    $('mkt-dir-icon').textContent  = icons[status.marketDirection] || '↔️';
+    $('mkt-dir-label').textContent = labels[status.marketDirection] || 'Mixed';
+  } else {
+    dirSec.classList.add('hidden');
+  }
+
+  // Movers table
+  const moverEl = $('mkt-movers');
+  $('mkt-movers-sub').textContent = status.marketOpen
+    ? `(session, updates every 15s)`
+    : `(closed — showing base prices)`;
+
+  if (!movers || !movers.length) {
+    moverEl.innerHTML = '<p class="text-slate-500 text-sm">No data available.</p>';
+    return;
+  }
+
+  const gainers = movers.filter(m=>m.changePercent>0).length;
+  const decliners = movers.filter(m=>m.changePercent<0).length;
+
+  moverEl.innerHTML = `
+    <div class="flex gap-4 text-xs text-slate-400 mb-3">
+      <span class="pos">▲ ${gainers} advancing</span>
+      <span class="neg">▼ ${decliners} declining</span>
+      <span class="text-slate-500">${movers.length - gainers - decliners} flat</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Ticker</th><th>Name</th><th>Open</th><th>Current</th><th>Change %</th><th>Direction</th>
+      </tr></thead>
+      <tbody>
+        ${movers.map(m=>`<tr>
+          <td class="font-bold">${m.ticker}</td>
+          <td class="text-slate-300 text-xs">${m.name}</td>
+          <td class="text-slate-400">${fmt(m.openPrice)}</td>
+          <td class="font-semibold">${fmt(m.currentPrice)}</td>
+          <td class="${m.changePercent>=0?'pos':'neg'} font-bold">${m.changePercent>=0?'+':''}${m.changePercent}%</td>
+          <td><span class="badge ${m.direction==='UP'?'bg-green':m.direction==='DOWN'?'bg-red':'bg-amber'}">${m.direction==='UP'?'▲':m.direction==='DOWN'?'▼':'—'}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
 }
 
 // ──── init ─────────────────────────────────────────
