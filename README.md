@@ -90,9 +90,10 @@ Starting balance: **$25,000** (paper trading — no real money)
 - [x] Buy / Sell by shares or dollar amount
 - [x] Trade history
 - [x] Watchlist (add/remove tickers to monitor)
-- [ ] Market open/close simulation with agent reactions
+- [x] Market open/close simulation with agent reactions
+- [x] Docker polish (.dockerignore, JVM container flags, HEALTHCHECK)
 - [ ] SIP scheduler (auto-invest on interval)
-- [ ] Docker + Render.com deployment
+- [ ] Render.com auto-deploy from main
 
 ---
 
