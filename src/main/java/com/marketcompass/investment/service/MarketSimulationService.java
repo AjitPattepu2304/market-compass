@@ -28,6 +28,7 @@ public class MarketSimulationService {
     private final StockService       stockService;
     private final ETFService         etfService;
     private final MarketClockService clock;
+    private final LivePriceService   livePriceService;
 
     /** Current simulated prices — updated every tick. */
     private final Map<String, Double> livePrices        = new ConcurrentHashMap<>();
@@ -39,10 +40,12 @@ public class MarketSimulationService {
 
     public MarketSimulationService(StockService stockService,
                                    ETFService etfService,
-                                   MarketClockService clock) {
-        this.stockService = stockService;
-        this.etfService   = etfService;
-        this.clock        = clock;
+                                   MarketClockService clock,
+                                   LivePriceService livePriceService) {
+        this.stockService    = stockService;
+        this.etfService      = etfService;
+        this.clock           = clock;
+        this.livePriceService = livePriceService;
     }
 
     @PostConstruct
@@ -138,6 +141,9 @@ public class MarketSimulationService {
     }
 
     private double basePrice(String ticker) {
+        // Use live price when available, fall back to hardcoded
+        double live = livePriceService.getPrice(ticker);
+        if (live > 0) return live;
         return stockService.getByTicker(ticker)
                 .map(Stock::getCurrentPrice)
                 .orElseGet(() -> etfService.getByTicker(ticker)
