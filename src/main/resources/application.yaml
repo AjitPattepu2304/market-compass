@@ -1,9 +1,19 @@
 spring:
   application:
     name: market-compass
+  # Allow both scheduled tasks to run concurrently (live-price refresh + market tick)
+  task:
+    scheduling:
+      pool:
+        size: 2
 
 server:
   port: 8080
 
-# Cassandra is excluded via @SpringBootApplication(exclude = ...) in the main class.
-# Add connection details here if you wire up a real Cassandra instance later.
+# ── Finnhub live price feed ────────────────────────────────────────────────────
+# Sign up free at https://finnhub.io → copy your API key.
+# Set FINNHUB_API_KEY env var (Render dashboard → Environment).
+# If unset, app falls back to hardcoded static prices — everything still works.
+finnhub:
+  api:
+    key: ${FINNHUB_API_KEY:}

@@ -452,8 +452,11 @@
 
   <!-- ─── MARKET ───────────────────────────────── -->
   <div id="page-market" class="p-6 max-w-5xl mx-auto hidden">
-    <h1 class="text-2xl font-bold mb-1">🕐 Market</h1>
-    <p class="text-slate-400 text-sm mb-5">Live session status and simulated intraday price movements.</p>
+    <div class="flex items-center gap-3 mb-1">
+      <h1 class="text-2xl font-bold">🕐 Market</h1>
+      <span id="mkt-data-badge" class="badge bg-amber text-xs">⏳ Checking…</span>
+    </div>
+    <p class="text-slate-400 text-sm mb-5">NYSE session status and intraday price movements.</p>
 
     <!-- Status card -->
     <div class="card mb-5">
@@ -1051,6 +1054,16 @@ async function loadMarket() {
     fetch('/api/market/status').then(r=>r.json()),
     fetch('/api/market/movers').then(r=>r.json())
   ]);
+
+  // Data source badge
+  const dataBadge = $('mkt-data-badge');
+  if (status.liveData) {
+    dataBadge.className = 'badge bg-green text-xs';
+    dataBadge.textContent = '🟢 Live (Finnhub)';
+  } else {
+    dataBadge.className = 'badge bg-amber text-xs';
+    dataBadge.textContent = '🟡 Simulated';
+  }
 
   // Status card
   $('mkt-badge').textContent    = status.sessionBadge;

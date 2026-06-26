@@ -18,12 +18,15 @@ import java.util.stream.Collectors;
 public class WatchlistService {
 
     private final Map<String, WatchlistItem> watchlist = new LinkedHashMap<>();
-    private final StockService stockService;
-    private final ETFService etfService;
+    private final StockService    stockService;
+    private final ETFService      etfService;
+    private final LivePriceService livePriceService;
 
-    public WatchlistService(StockService stockService, ETFService etfService) {
-        this.stockService = stockService;
-        this.etfService = etfService;
+    public WatchlistService(StockService stockService, ETFService etfService,
+                            LivePriceService livePriceService) {
+        this.stockService     = stockService;
+        this.etfService       = etfService;
+        this.livePriceService = livePriceService;
     }
 
     // ─── Add ───────────────────────────────────────────────────────────────────
@@ -117,6 +120,8 @@ public class WatchlistService {
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
     private double resolvePrice(String ticker) {
+        double live = livePriceService.getPrice(ticker);
+        if (live > 0) return live;
         return stockService.getByTicker(ticker)
                 .map(s -> s.getCurrentPrice())
                 .orElseGet(() -> etfService.getByTicker(ticker)

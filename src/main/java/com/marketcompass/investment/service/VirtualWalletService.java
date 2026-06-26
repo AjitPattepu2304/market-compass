@@ -29,13 +29,16 @@ public class VirtualWalletService {
     private final StockService stockService;
     private final ETFService etfService;
     private final PortfolioService portfolioService;
+    private final LivePriceService livePriceService;
 
     public VirtualWalletService(StockService stockService,
                                 ETFService etfService,
-                                PortfolioService portfolioService) {
-        this.stockService = stockService;
-        this.etfService = etfService;
+                                PortfolioService portfolioService,
+                                LivePriceService livePriceService) {
+        this.stockService    = stockService;
+        this.etfService      = etfService;
         this.portfolioService = portfolioService;
+        this.livePriceService = livePriceService;
     }
 
     @PostConstruct
@@ -217,6 +220,8 @@ public class VirtualWalletService {
     }
 
     private double resolvePrice(String ticker) {
+        double live = livePriceService.getPrice(ticker);
+        if (live > 0) return live;
         return stockService.getByTicker(ticker)
                 .map(s -> s.getCurrentPrice())
                 .orElseGet(() -> etfService.getByTicker(ticker)

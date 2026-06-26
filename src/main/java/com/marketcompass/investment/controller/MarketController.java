@@ -1,6 +1,7 @@
 package com.marketcompass.investment.controller;
 
 import com.marketcompass.investment.model.MarketSession;
+import com.marketcompass.investment.service.LivePriceService;
 import com.marketcompass.investment.service.MarketClockService;
 import com.marketcompass.investment.service.MarketSimulationService;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,14 @@ public class MarketController {
 
     private final MarketClockService      clock;
     private final MarketSimulationService simulation;
+    private final LivePriceService        livePriceService;
 
     public MarketController(MarketClockService clock,
-                            MarketSimulationService simulation) {
-        this.clock      = clock;
-        this.simulation = simulation;
+                            MarketSimulationService simulation,
+                            LivePriceService livePriceService) {
+        this.clock           = clock;
+        this.simulation      = simulation;
+        this.livePriceService = livePriceService;
     }
 
     @GetMapping("/status")
@@ -43,6 +47,7 @@ public class MarketController {
         status.put("nextEventLabel",  clock.nextEventLabel());
         status.put("nextEventTime",   clock.nextEventTime());
         status.put("marketDirection", direction);
+        status.put("liveData",        livePriceService.isLive());
         status.put("agentComment",    buildAgentComment(session, direction));
         return ResponseEntity.ok(status);
     }
