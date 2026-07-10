@@ -1,0 +1,38 @@
+name: Contract Job Hunter
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour, all day
+  workflow_dispatch:        # manual trigger from GitHub Actions UI
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run job hunter
+        env:
+          EMAIL_FROM:     ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO:       ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: python job_hunter.py
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contract-jobs-${{ github.run_number }}
+          path: |
+            contract_jobs.csv
+            contract_jobs.json
+          retention-days: 30
