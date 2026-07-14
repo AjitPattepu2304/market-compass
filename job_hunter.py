@@ -127,35 +127,41 @@ def append_json(jobs: list):
 
 def resolve_url(adzuna_url: str) -> str:
     """
-    Fetch the Adzuna job page and extract the real employer/job-board apply URL.
-    Adzuna pages contain the original source URL in a data attribute or JSON blob.
-    Falls back to the Adzuna URL if extraction fails (still works — no login needed).
+    Fetch the Adzuna job page and extract the real external job URL.
+    Looks for 'Return to job advert' link or canonical source URL.
+    Falls back to the Adzuna URL — click 'Return to job advert' to apply without login.
     """
     try:
         req = urllib.request.Request(
             adzuna_url,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "text/html,application/xhtml+xml,*/*",
+            },
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             html = resp.read().decode("utf-8", errors="ignore")
 
-        # Try several patterns Adzuna uses for the external apply URL
+        # Patterns Adzuna uses for the original source/apply URL
         patterns = [
-            r'"applyUrl"\s*:\s*"([^"]+)"',          # JSON blob
-            r'data-apply-url=["\']([^"\']+)["\']',   # data attribute
-            r'href=["\']([^"\']+)["\'][^>]*>Apply',  # apply button href
-            r'"url"\s*:\s*"(https://(?!www\.adzuna)[^"]+)"',  # non-Adzuna URL in JSON
+            r'"sourceUrl"\s*:\s*"([^"]+)"',                    # source URL in JSON
+            r'"externalApplyUrl"\s*:\s*"([^"]+)"',             # explicit external apply
+            r'data-href=["\']([^"\']+)["\'][^>]*return.to.job', # return to job advert
+            r'"canonicalUrl"\s*:\s*"([^"]+)"',                 # canonical URL
+            r'href=["\']([^"\']+)["\'][^>]*>Return to job',    # return to job advert link
+            r'"applyUrl"\s*:\s*"([^"]+)"',                     # generic apply URL
         ]
         for pattern in patterns:
             m = re.search(pattern, html, re.IGNORECASE)
             if m:
-                candidate = m.group(1).replace("\\u0026", "&").replace("\\/", "/")
+                candidate = m.group(1).replace("\\u0026", "&").replace("\\/", "/").replace("\\u003d", "=")
                 if candidate.startswith("http") and "adzuna.com" not in candidate:
                     return candidate
 
     except Exception:
         pass
-    return adzuna_url   # fallback — Adzuna page still shows full job + apply button
+    # Fallback: return Adzuna URL — on that page click "Return to job advert" to apply directly
+    return adzuna_url
 
 
 def search_adzuna(keyword: str, page: int = 1) -> list:
