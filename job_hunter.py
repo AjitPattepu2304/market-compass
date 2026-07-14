@@ -40,10 +40,9 @@ KEYWORDS = [
     "Java backend engineer contract",
 ]
 
-TARGET_STATES  = {"NC", "GA", "TX", "VA", "PA", "NJ"}
-INCLUDE_REMOTE = True
-RESULTS_PER_PAGE = 50
-PAGES_PER_KEYWORD = 2
+# No location filter — search all USA, results include location column
+RESULTS_PER_PAGE  = 50
+PAGES_PER_KEYWORD = 4   # 50 x 4 = 200 results per keyword
 
 OUTPUT_DIR  = Path(__file__).parent
 OUTPUT_CSV  = OUTPUT_DIR / "contract_jobs.csv"
@@ -86,15 +85,18 @@ def append_csv(jobs: list):
     with open(OUTPUT_CSV, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         if write_header:
-            writer.writeheader()
+            writer.writeheader()  # always write header so file exists even if empty
         for job in jobs:
             writer.writerow({k: job.get(k, "") for k in CSV_FIELDS})
 
 def append_json(jobs: list):
     existing = []
     if OUTPUT_JSON.exists():
-        with open(OUTPUT_JSON) as f:
-            existing = json.load(f)
+        try:
+            with open(OUTPUT_JSON) as f:
+                existing = json.load(f)
+        except Exception:
+            existing = []
     with open(OUTPUT_JSON, "w") as f:
         json.dump(jobs + existing, f, indent=2)
 
@@ -123,11 +125,6 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
         for item in data.get("results", []):
             location_str = item.get("location", {}).get("display_name", "")
-            state        = extract_state(location_str)
-            is_remote    = "remote" in location_str.lower() or "remote" in item.get("title", "").lower()
-
-            if state not in TARGET_STATES and not (INCLUDE_REMOTE and is_remote):
-                continue
 
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
@@ -150,12 +147,6 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
     except Exception as e:
         log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
     return jobs
-
-def extract_state(location: str) -> str:
-    for part in [p.strip() for p in location.split(",")]:
-        if len(part) == 2 and part.isupper():
-            return part
-    return ""
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 
@@ -184,7 +175,7 @@ def send_email(new_jobs: list):
 def run_search():
     log.info("=" * 70)
     log.info(f"Search started — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    log.info(f"Target states: {', '.join(sorted(TARGET_STATES))}")
+    log.info("Scope: All USA contract roles")
 
     if not ADZUNA_APP_ID:
         log.error("ADZUNA_APP_ID not set. Get free key at https://developer.adzuna.com")
@@ -197,7 +188,7 @@ def run_search():
         log.info(f"  Searching: '{keyword}'")
         for page in range(1, PAGES_PER_KEYWORD + 1):
             batch = search_adzuna(keyword, page)
-            log.info(f"    Page {page}: {len(batch)} matching jobs in target states")
+            log.info(f"    Page {page}: {len(batch)} jobs found")
             for job in batch:
                 if not job.get("url"):
                     continue
@@ -210,12 +201,13 @@ def run_search():
 
     save_seen(seen)
 
+    # Always write files so GitHub Actions artifact upload never fails
+    append_csv(new_jobs)
+    append_json(new_jobs)
+
     if not new_jobs:
         log.info("No new jobs this cycle.")
         return
-
-    append_csv(new_jobs)
-    append_json(new_jobs)
 
     print(f"\n{'='*70}")
     print(f"  {len(new_jobs)} NEW CONTRACT JOBS  —  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
