@@ -34,15 +34,38 @@ import urllib.parse
 ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
+# General keyword searches
 KEYWORDS = [
     "Java Spring Boot contract",
     "Java microservices Kafka contract",
     "Java backend engineer contract",
+    "Java distributed systems contract",
+]
+
+# Staffing vendor + company searches — these firms post most contract Java roles
+# Format: (keyword, company_name)
+VENDOR_SEARCHES = [
+    ("Java Spring Boot",   "TEKsystems"),
+    ("Java developer",     "TEKsystems"),
+    ("Java Spring Boot",   "Randstad"),
+    ("Java developer",     "Randstad"),
+    ("Java Spring Boot",   "Insight Global"),
+    ("Java developer",     "Insight Global"),
+    ("Java Spring Boot",   "UST Global"),
+    ("Java Spring Boot",   "Cognizant"),
+    ("Java developer",     "Cognizant"),
+    ("Java Spring Boot",   "HCL Technologies"),
+    ("Java Spring Boot",   "Robert Half"),
+    ("Java Spring Boot",   "Apex Systems"),
+    ("Java Spring Boot",   "Kforce"),
+    ("Java Spring Boot",   "Infosys"),
+    ("Java developer",     "Wipro"),
+    ("Java Spring Boot",   "EPAM Systems"),
 ]
 
 # No location filter — search all USA, results include location column
 RESULTS_PER_PAGE  = 50
-PAGES_PER_KEYWORD = 4   # 50 x 4 = 200 results per keyword
+PAGES_PER_KEYWORD = 2   # 50 x 2 = 100 results per keyword/vendor
 
 OUTPUT_DIR  = Path(__file__).parent
 OUTPUT_CSV  = OUTPUT_DIR / "contract_jobs.csv"
@@ -102,7 +125,20 @@ def append_json(jobs: list):
 
 # ── Adzuna API ────────────────────────────────────────────────────────────────
 
-def search_adzuna(keyword: str, page: int = 1) -> list:
+def resolve_url(adzuna_redirect_url: str) -> str:
+    """Follow Adzuna redirect to get the real job posting URL."""
+    try:
+        req = urllib.request.Request(
+            adzuna_redirect_url,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return resp.url   # final URL after redirects
+    except Exception:
+        return adzuna_redirect_url   # fallback to Adzuna link
+
+
+def search_adzuna(keyword: str, page: int = 1, company: str = "") -> list:
     if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
         log.error("ADZUNA_APP_ID / ADZUNA_APP_KEY not set. See script header.")
         return []
@@ -115,6 +151,9 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         "contract":         1,
         "content-type":     "application/json",
     }
+    if company:
+        params["who"] = company   # filter by company/employer name
+
     url = f"https://api.adzuna.com/v1/api/jobs/us/search/{page}?{urllib.parse.urlencode(params)}"
 
     jobs = []
@@ -125,6 +164,8 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
         for item in data.get("results", []):
             location_str = item.get("location", {}).get("display_name", "")
+            adzuna_url   = item.get("redirect_url", "")
+            real_url     = resolve_url(adzuna_url) if adzuna_url else ""
 
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
@@ -135,17 +176,17 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
                 salary = f"${int(s_min/1000)}k+"
 
             jobs.append({
-                "title":   item.get("title", ""),
-                "company": item.get("company", {}).get("display_name", ""),
+                "title":    item.get("title", ""),
+                "company":  item.get("company", {}).get("display_name", ""),
                 "location": location_str,
-                "salary":  salary,
-                "type":    "Contract",
-                "posted":  (item.get("created") or "")[:10],
-                "url":     item.get("redirect_url", ""),
-                "source":  "Adzuna",
+                "salary":   salary,
+                "type":     "Contract",
+                "posted":   (item.get("created") or "")[:10],
+                "url":      real_url,
+                "source":   f"Adzuna/{company}" if company else "Adzuna",
             })
     except Exception as e:
-        log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
+        log.warning(f"  Adzuna error ('{keyword}'{' @ '+company if company else ''} page {page}): {e}")
     return jobs
 
 # ── Email ─────────────────────────────────────────────────────────────────────
@@ -184,11 +225,29 @@ def run_search():
     seen = load_seen()
     new_jobs = []
 
+    # ── General keyword searches ───────────────────────────────────────────────
     for keyword in KEYWORDS:
-        log.info(f"  Searching: '{keyword}'")
+        log.info(f"  Keyword: '{keyword}'")
         for page in range(1, PAGES_PER_KEYWORD + 1):
             batch = search_adzuna(keyword, page)
-            log.info(f"    Page {page}: {len(batch)} jobs found")
+            log.info(f"    Page {page}: {len(batch)} jobs")
+            for job in batch:
+                if not job.get("url"):
+                    continue
+                jid = job_id(job["url"])
+                if jid not in seen:
+                    seen.add(jid)
+                    job["found_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    new_jobs.append(job)
+            time.sleep(0.5)
+
+    # ── Staffing vendor searches ───────────────────────────────────────────────
+    log.info("  --- Staffing vendor searches ---")
+    for keyword, company in VENDOR_SEARCHES:
+        log.info(f"  Vendor: '{company}' | '{keyword}'")
+        for page in range(1, PAGES_PER_KEYWORD + 1):
+            batch = search_adzuna(keyword, page, company=company)
+            log.info(f"    Page {page}: {len(batch)} jobs")
             for job in batch:
                 if not job.get("url"):
                     continue
