@@ -42,25 +42,24 @@ KEYWORDS = [
     "Java distributed systems contract",
 ]
 
-# Staffing vendor + company searches — these firms post most contract Java roles
-# Format: (keyword, company_name)
+# Vendor-targeted searches — company name embedded in keyword (Adzuna `who` param not supported)
 VENDOR_SEARCHES = [
-    ("Java Spring Boot",   "TEKsystems"),
-    ("Java developer",     "TEKsystems"),
-    ("Java Spring Boot",   "Randstad"),
-    ("Java developer",     "Randstad"),
-    ("Java Spring Boot",   "Insight Global"),
-    ("Java developer",     "Insight Global"),
-    ("Java Spring Boot",   "UST Global"),
-    ("Java Spring Boot",   "Cognizant"),
-    ("Java developer",     "Cognizant"),
-    ("Java Spring Boot",   "HCL Technologies"),
-    ("Java Spring Boot",   "Robert Half"),
-    ("Java Spring Boot",   "Apex Systems"),
-    ("Java Spring Boot",   "Kforce"),
-    ("Java Spring Boot",   "Infosys"),
-    ("Java developer",     "Wipro"),
-    ("Java Spring Boot",   "EPAM Systems"),
+    "Java Spring Boot TEKsystems contract",
+    "Java developer TEKsystems contract",
+    "Java Spring Boot Randstad contract",
+    "Java developer Randstad contract",
+    "Java Spring Boot Insight Global contract",
+    "Java developer Insight Global contract",
+    "Java Spring Boot UST Global contract",
+    "Java Spring Boot Cognizant contract",
+    "Java developer Cognizant contract",
+    "Java Spring Boot HCL contract",
+    "Java Spring Boot Robert Half contract",
+    "Java Spring Boot Apex Systems contract",
+    "Java Spring Boot Kforce contract",
+    "Java Spring Boot Infosys contract",
+    "Java developer Wipro contract",
+    "Java Spring Boot EPAM contract",
 ]
 
 # No location filter — search all USA, results include location column
@@ -138,7 +137,7 @@ def resolve_url(adzuna_redirect_url: str) -> str:
         return adzuna_redirect_url   # fallback to Adzuna link
 
 
-def search_adzuna(keyword: str, page: int = 1, company: str = "") -> list:
+def search_adzuna(keyword: str, page: int = 1) -> list:
     if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
         log.error("ADZUNA_APP_ID / ADZUNA_APP_KEY not set. See script header.")
         return []
@@ -151,9 +150,6 @@ def search_adzuna(keyword: str, page: int = 1, company: str = "") -> list:
         "contract":         1,
         "content-type":     "application/json",
     }
-    if company:
-        params["who"] = company   # filter by company/employer name
-
     url = f"https://api.adzuna.com/v1/api/jobs/us/search/{page}?{urllib.parse.urlencode(params)}"
 
     jobs = []
@@ -183,10 +179,10 @@ def search_adzuna(keyword: str, page: int = 1, company: str = "") -> list:
                 "type":     "Contract",
                 "posted":   (item.get("created") or "")[:10],
                 "url":      real_url,
-                "source":   f"Adzuna/{company}" if company else "Adzuna",
+                "source":   "Adzuna",
             })
     except Exception as e:
-        log.warning(f"  Adzuna error ('{keyword}'{' @ '+company if company else ''} page {page}): {e}")
+        log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
     return jobs
 
 # ── Email ─────────────────────────────────────────────────────────────────────
@@ -243,10 +239,10 @@ def run_search():
 
     # ── Staffing vendor searches ───────────────────────────────────────────────
     log.info("  --- Staffing vendor searches ---")
-    for keyword, company in VENDOR_SEARCHES:
-        log.info(f"  Vendor: '{company}' | '{keyword}'")
+    for keyword in VENDOR_SEARCHES:
+        log.info(f"  Vendor search: '{keyword}'")
         for page in range(1, PAGES_PER_KEYWORD + 1):
-            batch = search_adzuna(keyword, page, company=company)
+            batch = search_adzuna(keyword, page)
             log.info(f"    Page {page}: {len(batch)} jobs")
             for job in batch:
                 if not job.get("url"):
