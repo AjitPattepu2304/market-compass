@@ -19,6 +19,7 @@ Free tier: 1000 req/month. This uses ~3 req/run x 6 runs/day = ~540/month.
 import csv
 import json
 import os
+import re
 import time
 import logging
 import hashlib
@@ -76,7 +77,7 @@ EMAIL_FROM     = os.getenv("EMAIL_FROM", "")
 EMAIL_TO       = os.getenv("EMAIL_TO", "")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
 
-CSV_FIELDS = ["title", "company", "location", "salary", "type", "posted", "url", "source", "found_at"]
+CSV_FIELDS = ["title", "company", "location", "salary", "type", "posted", "url", "adzuna_url", "source", "found_at"]
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -124,17 +125,37 @@ def append_json(jobs: list):
 
 # ── Adzuna API ────────────────────────────────────────────────────────────────
 
-def resolve_url(adzuna_redirect_url: str) -> str:
-    """Follow Adzuna redirect to get the real job posting URL."""
+def resolve_url(adzuna_url: str) -> str:
+    """
+    Fetch the Adzuna job page and extract the real employer/job-board apply URL.
+    Adzuna pages contain the original source URL in a data attribute or JSON blob.
+    Falls back to the Adzuna URL if extraction fails (still works — no login needed).
+    """
     try:
         req = urllib.request.Request(
-            adzuna_redirect_url,
-            headers={"User-Agent": "Mozilla/5.0"},
+            adzuna_url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return resp.url   # final URL after redirects
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        # Try several patterns Adzuna uses for the external apply URL
+        patterns = [
+            r'"applyUrl"\s*:\s*"([^"]+)"',          # JSON blob
+            r'data-apply-url=["\']([^"\']+)["\']',   # data attribute
+            r'href=["\']([^"\']+)["\'][^>]*>Apply',  # apply button href
+            r'"url"\s*:\s*"(https://(?!www\.adzuna)[^"]+)"',  # non-Adzuna URL in JSON
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, html, re.IGNORECASE)
+            if m:
+                candidate = m.group(1).replace("\\u0026", "&").replace("\\/", "/")
+                if candidate.startswith("http") and "adzuna.com" not in candidate:
+                    return candidate
+
     except Exception:
-        return adzuna_redirect_url   # fallback to Adzuna link
+        pass
+    return adzuna_url   # fallback — Adzuna page still shows full job + apply button
 
 
 def search_adzuna(keyword: str, page: int = 1) -> list:
@@ -160,8 +181,8 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
         for item in data.get("results", []):
             location_str = item.get("location", {}).get("display_name", "")
-            adzuna_url   = item.get("redirect_url", "")
-            real_url     = resolve_url(adzuna_url) if adzuna_url else ""
+            adzuna_link  = item.get("redirect_url", "")
+            real_url     = resolve_url(adzuna_link) if adzuna_link else ""
 
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
@@ -178,8 +199,9 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
                 "salary":   salary,
                 "type":     "Contract",
                 "posted":   (item.get("created") or "")[:10],
-                "url":      real_url,
-                "source":   "Adzuna",
+                "url":        real_url,       # direct employer/job-board URL
+                "adzuna_url": adzuna_link,    # fallback: full job details + apply button
+                "source":     "Adzuna",
             })
     except Exception as e:
         log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
