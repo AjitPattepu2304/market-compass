@@ -37,10 +37,12 @@ ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
 # General keyword searches
 KEYWORDS = [
-    "Java Spring Boot contract",
-    "Java microservices Kafka contract",
+    "Java Spring Boot contract C2C",
+    "Java Spring Boot contract W2",
+    "Java microservices contract C2C",
     "Java backend engineer contract",
-    "Java distributed systems contract",
+    "Java Spring Boot implementation partner",
+    "Java developer direct client contract",
 ]
 
 # Vendor-targeted searches — company name embedded in keyword (Adzuna `who` param not supported)
