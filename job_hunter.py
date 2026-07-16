@@ -43,6 +43,12 @@ KEYWORDS = [
     "Java developer Spring Boot",
     "Java Kafka microservices",
     "Java Spring Boot Kubernetes",
+    "Java software engineer",
+    "Java developer",
+    "Java backend developer",
+    "software engineer Java",
+    "software developer Java Spring",
+    "backend software engineer Java",
 ]
 
 # Vendor-targeted searches
