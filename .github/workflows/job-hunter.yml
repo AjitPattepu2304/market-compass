@@ -29,6 +29,15 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         run: python job_hunter.py
 
+      - name: Persist seen jobs to avoid duplicates across runs
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f seen_jobs.json contract_jobs.csv contract_jobs.json || true
+          git diff --cached --quiet || git commit -m "chore: update job hunter state [skip ci]"
+          git push || true
+
       - name: Upload results as artifact
         uses: actions/upload-artifact@v4
         if: always()

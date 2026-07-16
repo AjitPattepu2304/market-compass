@@ -35,32 +35,38 @@ import urllib.parse
 ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
-# General keyword searches
+# General keyword searches — broad to get maximum results
 KEYWORDS = [
-    "Java Spring Boot contract",
-    "Java microservices Kafka contract",
-    "Java backend engineer contract",
-    "Java distributed systems contract",
+    "Java Spring Boot",
+    "Java microservices",
+    "Java backend engineer",
+    "Java developer Spring Boot",
+    "Java Kafka microservices",
+    "Java Spring Boot Kubernetes",
+    "Java software engineer",
+    "Java developer",
+    "Java backend developer",
+    "software engineer Java",
+    "software developer Java Spring",
+    "backend software engineer Java",
 ]
 
-# Vendor-targeted searches — company name embedded in keyword (Adzuna `who` param not supported)
+# Vendor-targeted searches
 VENDOR_SEARCHES = [
-    "Java Spring Boot TEKsystems contract",
-    "Java developer TEKsystems contract",
-    "Java Spring Boot Randstad contract",
-    "Java developer Randstad contract",
-    "Java Spring Boot Insight Global contract",
-    "Java developer Insight Global contract",
-    "Java Spring Boot UST Global contract",
-    "Java Spring Boot Cognizant contract",
-    "Java developer Cognizant contract",
-    "Java Spring Boot HCL contract",
-    "Java Spring Boot Robert Half contract",
-    "Java Spring Boot Apex Systems contract",
+    "Java TEKsystems",
+    "Java Randstad",
+    "Java Insight Global",
+    "Java UST Global",
+    "Java Cognizant",
+    "Java HCL",
+    "Java Robert Half",
+    "Java Apex Systems",
     "Java Spring Boot Kforce contract",
     "Java Spring Boot Infosys contract",
-    "Java developer Wipro contract",
-    "Java Spring Boot EPAM contract",
+    "Java Wipro",
+    "Java EPAM",
+    "Java Kforce",
+    "Java Infosys",
 ]
 
 # No location filter — search all USA, results include location column
@@ -174,7 +180,6 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         "app_key":          ADZUNA_APP_KEY,
         "results_per_page": RESULTS_PER_PAGE,
         "what":             keyword,
-        "contract":         1,
         "content-type":     "application/json",
     }
     url = f"https://api.adzuna.com/v1/api/jobs/us/search/{page}?{urllib.parse.urlencode(params)}"
