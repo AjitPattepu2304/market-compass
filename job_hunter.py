@@ -26,6 +26,7 @@ import hashlib
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 import urllib.request
 import urllib.parse
@@ -35,7 +36,7 @@ import urllib.parse
 ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
-# General keyword searches — broad to get maximum results
+# General keyword searches — contract + full-time
 KEYWORDS = [
     "Java Spring Boot",
     "Java microservices",
@@ -49,6 +50,12 @@ KEYWORDS = [
     "software engineer Java",
     "software developer Java Spring",
     "backend software engineer Java",
+    # Full-time specific
+    "Java Spring Boot full time",
+    "Java developer full time",
+    "Java software engineer full time",
+    "senior Java developer",
+    "Java backend full time permanent",
 ]
 
 # Vendor-targeted searches
@@ -203,15 +210,25 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
             elif s_min:
                 salary = f"${int(s_min/1000)}k+"
 
+            # Detect job type from Adzuna field + title keywords
+            raw_type = (item.get("contract_type") or "").lower()
+            title_lower = item.get("title", "").lower()
+            if "permanent" in raw_type or "full_time" in raw_type or "full-time" in title_lower or "permanent" in title_lower:
+                job_type = "Full-time"
+            elif "contract" in raw_type or "contract" in title_lower or "c2c" in title_lower or "w2" in title_lower:
+                job_type = "Contract"
+            else:
+                job_type = "Contract/FT"   # unknown — show both
+
             jobs.append({
-                "title":    item.get("title", ""),
-                "company":  item.get("company", {}).get("display_name", ""),
-                "location": location_str,
-                "salary":   salary,
-                "type":     "Contract",
-                "posted":   (item.get("created") or "")[:10],
-                "url":        real_url,       # direct employer/job-board URL
-                "adzuna_url": adzuna_link,    # fallback: full job details + apply button
+                "title":      item.get("title", ""),
+                "company":    item.get("company", {}).get("display_name", ""),
+                "location":   location_str,
+                "salary":     salary,
+                "type":       job_type,
+                "posted":     (item.get("created") or "")[:10],
+                "url":        real_url,
+                "adzuna_url": adzuna_link,
                 "source":     "Adzuna",
             })
     except Exception as e:
@@ -220,18 +237,88 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 
+def build_html_email(new_jobs: list) -> str:
+    contract = [j for j in new_jobs if j["type"] == "Contract"]
+    fulltime  = [j for j in new_jobs if j["type"] == "Full-time"]
+    other     = [j for j in new_jobs if j["type"] == "Contract/FT"]
+
+    def type_badge(t):
+        if t == "Contract":
+            return '<span style="background:#065f46;color:#34d399;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold">Contract</span>'
+        if t == "Full-time":
+            return '<span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold">Full-time</span>'
+        return '<span style="background:#3b1f5e;color:#c084fc;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold">Contract/FT</span>'
+
+    def job_rows(jobs):
+        rows = ""
+        for j in jobs:
+            apply_url = j.get("url") or j.get("adzuna_url", "#")
+            rows += f"""
+            <tr style="border-bottom:1px solid #334155">
+              <td style="padding:10px 8px">
+                <div style="font-weight:600;color:#e2e8f0">{j['title']}</div>
+                <div style="color:#94a3b8;font-size:12px">{j['company']}</div>
+              </td>
+              <td style="padding:10px 8px;color:#94a3b8;font-size:13px">{j['location']}</td>
+              <td style="padding:10px 8px;color:#34d399;font-size:13px;font-weight:600">{j['salary'] or '—'}</td>
+              <td style="padding:10px 8px">{type_badge(j['type'])}</td>
+              <td style="padding:10px 8px;color:#64748b;font-size:12px">{j['posted']}</td>
+              <td style="padding:10px 8px">
+                <a href="{apply_url}" style="background:#059669;color:#fff;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold">Apply →</a>
+              </td>
+            </tr>"""
+        return rows
+
+    def section(title, jobs, color):
+        if not jobs:
+            return ""
+        return f"""
+        <h3 style="color:{color};margin:24px 0 8px">{title} ({len(jobs)})</h3>
+        <table style="width:100%;border-collapse:collapse;background:#1e293b;border-radius:8px;overflow:hidden">
+          <thead>
+            <tr style="background:#0f172a">
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">ROLE</th>
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">LOCATION</th>
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">SALARY</th>
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">TYPE</th>
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">POSTED</th>
+              <th style="padding:8px;text-align:left;color:#64748b;font-size:11px">APPLY</th>
+            </tr>
+          </thead>
+          <tbody>{job_rows(jobs)}</tbody>
+        </table>"""
+
+    return f"""
+    <html><body style="background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:24px;margin:0">
+      <div style="max-width:900px;margin:0 auto">
+        <h2 style="color:#34d399;margin-bottom:4px">🎯 {len(new_jobs)} New Java Jobs Found</h2>
+        <p style="color:#64748b;margin:0 0 20px">{datetime.now().strftime('%B %d, %Y %H:%M')} — Contract + Full-time across USA</p>
+        {section("📋 Contract Roles", contract, "#34d399")}
+        {section("💼 Full-time Roles", fulltime, "#60a5fa")}
+        {section("🔀 Contract or Full-time", other, "#c084fc")}
+        <p style="color:#475569;font-size:11px;margin-top:24px">Powered by MarketCompass Job Hunter · Adzuna API</p>
+      </div>
+    </body></html>"""
+
+
 def send_email(new_jobs: list):
     if not all([EMAIL_FROM, EMAIL_TO, EMAIL_PASSWORD]):
         return
-    lines = [f"Found {len(new_jobs)} new Java contract jobs:\n"]
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"[Job Hunter] {len(new_jobs)} new Java jobs — Contract + Full-time"
+    msg["From"]    = EMAIL_FROM
+    msg["To"]      = EMAIL_TO
+
+    # Plain text fallback
+    plain = f"Found {len(new_jobs)} new Java jobs.\n\n"
     for j in new_jobs:
-        lines += [f"[{j['location']}] {j['title']} @ {j['company']}",
-                  f"  Salary: {j['salary'] or 'Not listed'}",
-                  f"  URL: {j['url']}\n"]
-    msg = MIMEText("\n".join(lines))
-    msg["Subject"] = f"[Job Hunter] {len(new_jobs)} new Java contract jobs"
-    msg["From"] = EMAIL_FROM
-    msg["To"]   = EMAIL_TO
+        plain += f"[{j['type']}] {j['title']} @ {j['company']} | {j['location']} | {j['salary'] or 'N/A'}\n{j.get('url') or j.get('adzuna_url','')}\n\n"
+    msg.attach(MIMEText(plain, "plain"))
+
+    # Rich HTML email
+    msg.attach(MIMEText(build_html_email(new_jobs), "html"))
+
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
             s.login(EMAIL_FROM, EMAIL_PASSWORD)
