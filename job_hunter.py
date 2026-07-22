@@ -36,7 +36,7 @@ import urllib.parse
 ADZUNA_APP_ID  = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 
-# General keyword searches — contract + full-time
+# General keyword searches — contract + full-time + C2C
 KEYWORDS = [
     "Java Spring Boot",
     "Java microservices",
@@ -50,30 +50,54 @@ KEYWORDS = [
     "software engineer Java",
     "software developer Java Spring",
     "backend software engineer Java",
+    # C2C specific
+    "Java developer C2C",
+    "Java Spring Boot C2C",
+    "Java engineer corp to corp",
+    "Java developer W2 contract",
     # Full-time specific
     "Java Spring Boot full time",
     "Java developer full time",
-    "Java software engineer full time",
     "senior Java developer",
-    "Java backend full time permanent",
 ]
 
-# Vendor-targeted searches
+# Staffing vendor searches — top US IT staffing firms that post Java contract/C2C roles
 VENDOR_SEARCHES = [
+    # Judge Group
+    "Java Judge Group",
+    # TEKsystems
     "Java TEKsystems",
-    "Java Randstad",
-    "Java Insight Global",
+    "Spring Boot TEKsystems",
+    # UST Global
     "Java UST Global",
+    # West Monroe / West Coast staffing
+    "Java West Monroe",
+    # Randstad group
+    "Java Randstad",
+    "Java Randstad Technologies",
+    "Java Randstad Digital",
+    # Insight Global
+    "Java Insight Global",
+    # Apex Systems
+    "Java Apex Systems",
+    # Robert Half Technology
+    "Java Robert Half Technology",
+    "Java Robert Half",
+    # Akkodis (Adecco Group)
+    "Java Akkodis",
+    # Experis (ManpowerGroup)
+    "Java Experis",
+    "Java ManpowerGroup",
+    # Kforce
+    "Java Kforce",
+    # TekRecruiter
+    "Java TekRecruiter",
+    # Other major vendors
     "Java Cognizant",
     "Java HCL",
-    "Java Robert Half",
-    "Java Apex Systems",
-    "Java Spring Boot Kforce contract",
-    "Java Spring Boot Infosys contract",
+    "Java Infosys",
     "Java Wipro",
     "Java EPAM",
-    "Java Kforce",
-    "Java Infosys",
 ]
 
 # No location filter — search all USA, results include location column
