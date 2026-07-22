@@ -316,9 +316,9 @@ def filter_relevant(jobs: list, min_score: int = 15) -> list:
 
 def build_html_email(new_jobs: list) -> str:
     vendor_jobs = [j for j in new_jobs if is_target_vendor(j)]
-    contract    = [j for j in new_jobs if j["type"] == "Contract"  and not is_target_vendor(j)]
-    fulltime    = [j for j in new_jobs if j["type"] == "Full-time" and not is_target_vendor(j)]
-    other       = [j for j in new_jobs if j["type"] == "Contract/FT" and not is_target_vendor(j)]
+    contract    = [j for j in new_jobs if j["type"] == "Contract"]
+    fulltime    = [j for j in new_jobs if j["type"] == "Full-time"]
+    other       = [j for j in new_jobs if j["type"] == "Contract/FT"]
 
     def type_badge(t):
         if t == "Contract":
