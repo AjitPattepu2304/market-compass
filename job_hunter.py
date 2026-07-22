@@ -246,8 +246,9 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
             adzuna_link  = item.get("redirect_url", "")
             real_url     = resolve_url(adzuna_link) if adzuna_link else ""
 
-            # Skip Dice.com postings — often expired/stale aggregator reposts
-            if "dice.com" in real_url or "dice.com" in adzuna_link:
+            # Skip Dice.com and other stale aggregator reposts
+            skip_domains = ["dice.com", "appcast.io", "jobvite.com/l/", "jobs2careers"]
+            if any(d in real_url or d in adzuna_link for d in skip_domains):
                 continue
 
             s_min = item.get("salary_min")
@@ -364,6 +365,15 @@ def search_yc_hiring() -> list:
             comment_id = comment.get("objectID", "")
             hn_url     = f"https://news.ycombinator.com/item?id={comment_id}"
 
+            # Extract real company/job URL from comment links
+            raw_html   = comment.get("comment_text") or ""
+            all_urls   = re.findall(r'href="(https?://[^"]+)"', raw_html)
+            job_url    = next(
+                (u for u in all_urls
+                 if not any(x in u for x in ["ycombinator", "hacker", "algolia"])),
+                hn_url   # fallback to HN comment if no external link found
+            )
+
             jobs.append({
                 "title":      "Java/Backend Engineer",
                 "company":    company,
@@ -371,7 +381,7 @@ def search_yc_hiring() -> list:
                 "salary":     salary,
                 "type":       "Full-time",
                 "posted":     (comment.get("created_at") or "")[:10],
-                "url":        hn_url,
+                "url":        job_url,
                 "adzuna_url": hn_url,
                 "source":     "YCombinator",
             })
