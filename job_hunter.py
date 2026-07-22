@@ -296,12 +296,12 @@ def search_yc_hiring() -> list:
     """
     jobs = []
     try:
-        # Step 1: Find latest Who's Hiring thread
+        # Step 1: Find latest Who's Hiring thread — posted by official 'whoishiring' account
         search_url = (
-            "https://hn.algolia.com/api/v1/search"
+            "https://hn.algolia.com/api/v1/search_by_date"
             "?query=Ask+HN%3A+Who+is+hiring%3F"
-            "&tags=story,ask_hn"
-            "&hitsPerPage=3"
+            "&tags=story,author_whoishiring"
+            "&hitsPerPage=1"
         )
         req = urllib.request.Request(search_url, headers={"User-Agent": "JobHunter/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
