@@ -24,7 +24,7 @@ import time
 import logging
 import hashlib
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
@@ -187,7 +187,6 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         "app_key":          ADZUNA_APP_KEY,
         "results_per_page": RESULTS_PER_PAGE,
         "what":             keyword,
-        "days_old":         3,       # only jobs posted in last 3 days
         "sort_by":          "date",  # newest first
         "content-type":     "application/json",
     }
@@ -199,7 +198,19 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode())
 
+        cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+
         for item in data.get("results", []):
+            # Skip jobs older than 3 days
+            created_str = item.get("created", "")
+            if created_str:
+                try:
+                    created_dt = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+                    if created_dt < cutoff:
+                        continue
+                except Exception:
+                    pass
+
             location_str = item.get("location", {}).get("display_name", "")
             adzuna_link  = item.get("redirect_url", "")
             real_url     = resolve_url(adzuna_link) if adzuna_link else ""
