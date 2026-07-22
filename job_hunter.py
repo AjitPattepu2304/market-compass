@@ -61,43 +61,50 @@ KEYWORDS = [
     "senior Java developer",
 ]
 
-# Staffing vendor searches — top US IT staffing firms that post Java contract/C2C roles
+# Vendor searches — kept minimal, company filtering done in filter_by_vendor()
 VENDOR_SEARCHES = [
-    # Judge Group
-    "Java Judge Group",
-    # TEKsystems
-    "Java TEKsystems",
-    "Spring Boot TEKsystems",
-    # UST Global
-    "Java UST Global",
-    # West Monroe / West Coast staffing
-    "Java West Monroe",
-    # Randstad group
-    "Java Randstad",
-    "Java Randstad Technologies",
-    "Java Randstad Digital",
-    # Insight Global
-    "Java Insight Global",
-    # Apex Systems
-    "Java Apex Systems",
-    # Robert Half Technology
-    "Java Robert Half Technology",
-    "Java Robert Half",
-    # Akkodis (Adecco Group)
-    "Java Akkodis",
-    # Experis (ManpowerGroup)
-    "Java Experis",
-    "Java ManpowerGroup",
-    # Kforce
-    "Java Kforce",
-    # TekRecruiter
-    "Java TekRecruiter",
-    # Other major vendors
-    "Java Cognizant",
-    "Java HCL",
-    "Java Infosys",
-    "Java Wipro",
-    "Java EPAM",
+    "Java Spring Boot contract",
+    "Java developer contract",
+    "Java microservices contract",
+    "senior Java engineer",
+]
+
+# Target staffing companies — matched against Adzuna's company field in results
+TARGET_VENDORS = [
+    # US Staffing Firms
+    "judge group", "judge",
+    "teksystems", "tek systems",
+    "ust global", "ust",
+    "randstad", "randstad technologies", "randstad digital",
+    "insight global",
+    "apex systems", "apex",
+    "robert half", "robert half technology",
+    "akkodis", "adecco",
+    "experis", "manpowergroup", "manpower",
+    "kforce",
+    "tekrecruiter",
+    "west monroe",
+    "cyient", "mastech", "softpath", "mindlance",
+    "collabera", "genesis10", "pearson frank",
+    "russell tobin", "motion recruitment",
+    "spherion", "staffmark", "staffworks",
+    # Big IT / Consulting / Offshore
+    "infosys", "infosys bpo",
+    "cognizant", "cognizant technology",
+    "tcs", "tata consultancy",
+    "wipro",
+    "hcl", "hcltech",
+    "capgemini",
+    "ibm", "ibm consulting",
+    "accenture",
+    "epam",
+    "ltimindtree", "lti", "mindtree",
+    "mphasis",
+    "tech mahindra",
+    "hexaware",
+    "birlasoft",
+    "niit technologies",
+    "persistent systems",
 ]
 
 # No location filter — search all USA, results include location column
@@ -315,6 +322,11 @@ def relevance_score(job: dict) -> int:
     return score
 
 
+def is_target_vendor(job: dict) -> bool:
+    company = job.get("company", "").lower()
+    return any(v in company for v in TARGET_VENDORS)
+
+
 def filter_relevant(jobs: list, min_score: int = 15) -> list:
     scored = [(relevance_score(j), j) for j in jobs]
     relevant = [(s, j) for s, j in scored if s >= min_score]
@@ -325,9 +337,10 @@ def filter_relevant(jobs: list, min_score: int = 15) -> list:
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def build_html_email(new_jobs: list) -> str:
-    contract = [j for j in new_jobs if j["type"] == "Contract"]
-    fulltime  = [j for j in new_jobs if j["type"] == "Full-time"]
-    other     = [j for j in new_jobs if j["type"] == "Contract/FT"]
+    vendor_jobs = [j for j in new_jobs if is_target_vendor(j)]
+    contract    = [j for j in new_jobs if j["type"] == "Contract"]
+    fulltime    = [j for j in new_jobs if j["type"] == "Full-time"]
+    other       = [j for j in new_jobs if j["type"] == "Contract/FT"]
 
     def type_badge(t):
         if t == "Contract":
@@ -380,6 +393,7 @@ def build_html_email(new_jobs: list) -> str:
       <div style="max-width:900px;margin:0 auto">
         <h2 style="color:#34d399;margin-bottom:4px">🎯 {len(new_jobs)} New Java Jobs Found</h2>
         <p style="color:#64748b;margin:0 0 20px">{datetime.now().strftime('%B %d, %Y %H:%M')} — Contract + Full-time across USA</p>
+        {section("🎯 Target Staffing Vendors", vendor_jobs, "#f59e0b")}
         {section("📋 Contract Roles", contract, "#34d399")}
         {section("💼 Full-time Roles", fulltime, "#60a5fa")}
         {section("🔀 Contract or Full-time", other, "#c084fc")}
