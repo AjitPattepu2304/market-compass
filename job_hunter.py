@@ -235,6 +235,56 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
     return jobs
 
+# ── Relevance filter ──────────────────────────────────────────────────────────
+
+# Must contain Java + at least one core skill to be considered relevant
+MUST_HAVE      = ["java"]
+CORE_SKILLS    = ["spring boot", "spring", "microservice", "backend", "distributed", "api"]
+BONUS_SKILLS   = ["kafka", "kubernetes", "k8s", "aws", "gcp", "cassandra", "docker",
+                  "hibernate", "jpa", "rest", "oauth", "ci/cd", "kafka", "kafka streams"]
+EXCLUDE_TITLES = ["frontend", "front-end", "angular", "react developer", "ios", "android",
+                  "qa engineer", "test engineer", "data engineer", "data scientist",
+                  "ml engineer", "machine learning", "devops engineer", "ui developer",
+                  "php", "ruby", ".net developer", "c# developer", "salesforce"]
+
+def relevance_score(job: dict) -> int:
+    text = (job.get("title", "") + " " + job.get("description", "")).lower()
+
+    # Exclude clearly irrelevant roles
+    title_l = job.get("title", "").lower()
+    if any(x in title_l for x in EXCLUDE_TITLES):
+        return 0
+
+    # Must have Java
+    if not any(m in text for m in MUST_HAVE):
+        return 0
+
+    score = 10  # baseline — passed Java check
+
+    # Core skills
+    for skill in CORE_SKILLS:
+        if skill in text:
+            score += 5
+
+    # Bonus skills from your stack
+    for skill in BONUS_SKILLS:
+        if skill in text:
+            score += 3
+
+    # Salary present = more specific posting
+    if job.get("salary"):
+        score += 5
+
+    return score
+
+
+def filter_relevant(jobs: list, min_score: int = 15) -> list:
+    scored = [(relevance_score(j), j) for j in jobs]
+    relevant = [(s, j) for s, j in scored if s >= min_score]
+    relevant.sort(key=lambda x: -x[0])  # highest score first
+    return [j for _, j in relevant]
+
+
 # ── Email ─────────────────────────────────────────────────────────────────────
 
 def build_html_email(new_jobs: list) -> str:
@@ -376,23 +426,28 @@ def run_search():
 
     save_seen(seen)
 
-    # Always write files so GitHub Actions artifact upload never fails
+    # Filter to only relevant jobs matching your profile
+    relevant_jobs = filter_relevant(new_jobs)
+    log.info(f"Relevance filter: {len(new_jobs)} total → {len(relevant_jobs)} relevant")
+
+    # Always write ALL jobs to CSV/JSON for reference
     append_csv(new_jobs)
     append_json(new_jobs)
 
-    if not new_jobs:
-        log.info("No new jobs this cycle.")
+    if not relevant_jobs:
+        log.info("No relevant new jobs this cycle.")
         return
 
     print(f"\n{'='*70}")
-    print(f"  {len(new_jobs)} NEW CONTRACT JOBS  —  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(f"  {len(relevant_jobs)} RELEVANT JOBS  (filtered from {len(new_jobs)} total) — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     print(f"{'='*70}")
-    for j in sorted(new_jobs, key=lambda x: x["location"]):
-        print(f"  {j['title'][:46]:<46}  {j['company'][:24]:<24}  {j['location']:<20}  {j['salary'] or '—'}")
+    for j in relevant_jobs:
+        print(f"  [{j['type']:<10}] {j['title'][:44]:<44}  {j['company'][:22]:<22}  {j['salary'] or '—'}")
     print(f"{'='*70}")
     print(f"  Saved -> {OUTPUT_CSV}\n")
 
-    send_email(new_jobs)
+    # Email only the relevant, scored jobs
+    send_email(relevant_jobs)
 
 if __name__ == "__main__":
     log.info("Contract Job Hunter (Adzuna API) started")
