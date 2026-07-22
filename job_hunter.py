@@ -244,12 +244,17 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
             location_str = item.get("location", {}).get("display_name", "")
             adzuna_link  = item.get("redirect_url", "")
-            real_url     = resolve_url(adzuna_link) if adzuna_link else ""
 
-            # Skip Dice.com and other stale aggregator reposts
-            skip_domains = ["dice.com", "appcast.io", "jobvite.com/l/", "jobs2careers"]
-            if any(d in real_url or d in adzuna_link for d in skip_domains):
+            # Check description for aggregator/Dice signals BEFORE resolving redirect
+            description  = (item.get("description") or "").lower()
+            skip_signals = ["dice.com", "appcast", "jobs2careers", "ziprecruiter.com",
+                           "apply on dice", "view on dice"]
+            if any(s in description or s in adzuna_link for s in skip_signals):
                 continue
+
+            # Use direct Adzuna link — resolve_url was slow and unreliable
+            # Adzuna page has full job details + Apply button (no login needed)
+            real_url = adzuna_link
 
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
@@ -269,14 +274,34 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
             else:
                 job_type = "Contract/FT"   # unknown — show both
 
+            company_name = item.get("company", {}).get("display_name", "")
+
+            # Map known vendors to their direct career pages
+            VENDOR_CAREERS = {
+                "judge group":    "https://judgegrp.com/jobs",
+                "teksystems":     "https://www.teksystems.com/en/careers",
+                "randstad":       "https://www.randstadusa.com/jobs/",
+                "insight global": "https://jobs.insightglobal.com/",
+                "apex systems":   "https://www.apexsystems.com/candidate",
+                "robert half":    "https://www.roberthalf.com/jobs",
+                "kforce":         "https://www.kforce.com/find-a-job/",
+                "akkodis":        "https://www.akkodis.com/en-us/jobs",
+                "experis":        "https://www.experis.com/en/find-work",
+            }
+            company_lower = company_name.lower()
+            direct_url = next(
+                (url for key, url in VENDOR_CAREERS.items() if key in company_lower),
+                real_url  # fallback to Adzuna link
+            )
+
             jobs.append({
                 "title":      item.get("title", ""),
-                "company":    item.get("company", {}).get("display_name", ""),
+                "company":    company_name,
                 "location":   location_str,
                 "salary":     salary,
                 "type":       job_type,
                 "posted":     (item.get("created") or "")[:10],
-                "url":        real_url,
+                "url":        direct_url,
                 "adzuna_url": adzuna_link,
                 "source":     "Adzuna",
             })
