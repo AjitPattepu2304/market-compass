@@ -244,11 +244,17 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
 
             location_str = item.get("location", {}).get("display_name", "")
             adzuna_link  = item.get("redirect_url", "")
-            real_url     = resolve_url(adzuna_link) if adzuna_link else ""
 
-            # Skip Dice.com postings — often expired/stale aggregator reposts
-            if "dice.com" in real_url or "dice.com" in adzuna_link:
+            # Check description for aggregator/Dice signals BEFORE resolving redirect
+            description  = (item.get("description") or "").lower()
+            skip_signals = ["dice.com", "appcast", "jobs2careers", "ziprecruiter.com",
+                           "apply on dice", "view on dice"]
+            if any(s in description or s in adzuna_link for s in skip_signals):
                 continue
+
+            # Use direct Adzuna link — resolve_url was slow and unreliable
+            # Adzuna page has full job details + Apply button (no login needed)
+            real_url = adzuna_link
 
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
@@ -268,14 +274,34 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
             else:
                 job_type = "Contract/FT"   # unknown — show both
 
+            company_name = item.get("company", {}).get("display_name", "")
+
+            # Map known vendors to their direct career pages
+            VENDOR_CAREERS = {
+                "judge group":    "https://judgegrp.com/jobs",
+                "teksystems":     "https://www.teksystems.com/en/careers",
+                "randstad":       "https://www.randstadusa.com/jobs/",
+                "insight global": "https://jobs.insightglobal.com/",
+                "apex systems":   "https://www.apexsystems.com/candidate",
+                "robert half":    "https://www.roberthalf.com/jobs",
+                "kforce":         "https://www.kforce.com/find-a-job/",
+                "akkodis":        "https://www.akkodis.com/en-us/jobs",
+                "experis":        "https://www.experis.com/en/find-work",
+            }
+            company_lower = company_name.lower()
+            direct_url = next(
+                (url for key, url in VENDOR_CAREERS.items() if key in company_lower),
+                real_url  # fallback to Adzuna link
+            )
+
             jobs.append({
                 "title":      item.get("title", ""),
-                "company":    item.get("company", {}).get("display_name", ""),
+                "company":    company_name,
                 "location":   location_str,
                 "salary":     salary,
                 "type":       job_type,
                 "posted":     (item.get("created") or "")[:10],
-                "url":        real_url,
+                "url":        direct_url,
                 "adzuna_url": adzuna_link,
                 "source":     "Adzuna",
             })
@@ -296,12 +322,12 @@ def search_yc_hiring() -> list:
     """
     jobs = []
     try:
-        # Step 1: Find latest Who's Hiring thread
+        # Step 1: Find latest Who's Hiring thread — posted by official 'whoishiring' account
         search_url = (
-            "https://hn.algolia.com/api/v1/search"
+            "https://hn.algolia.com/api/v1/search_by_date"
             "?query=Ask+HN%3A+Who+is+hiring%3F"
-            "&tags=story,ask_hn"
-            "&hitsPerPage=3"
+            "&tags=story,author_whoishiring"
+            "&hitsPerPage=1"
         )
         req = urllib.request.Request(search_url, headers={"User-Agent": "JobHunter/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -364,6 +390,15 @@ def search_yc_hiring() -> list:
             comment_id = comment.get("objectID", "")
             hn_url     = f"https://news.ycombinator.com/item?id={comment_id}"
 
+            # Extract real company/job URL from comment links
+            raw_html   = comment.get("comment_text") or ""
+            all_urls   = re.findall(r'href="(https?://[^"]+)"', raw_html)
+            job_url    = next(
+                (u for u in all_urls
+                 if not any(x in u for x in ["ycombinator", "hacker", "algolia"])),
+                hn_url   # fallback to HN comment if no external link found
+            )
+
             jobs.append({
                 "title":      "Java/Backend Engineer",
                 "company":    company,
@@ -371,7 +406,7 @@ def search_yc_hiring() -> list:
                 "salary":     salary,
                 "type":       "Full-time",
                 "posted":     (comment.get("created_at") or "")[:10],
-                "url":        hn_url,
+                "url":        job_url,
                 "adzuna_url": hn_url,
                 "source":     "YCombinator",
             })
