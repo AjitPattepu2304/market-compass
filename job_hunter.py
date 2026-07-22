@@ -246,6 +246,10 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
             adzuna_link  = item.get("redirect_url", "")
             real_url     = resolve_url(adzuna_link) if adzuna_link else ""
 
+            # Skip Dice.com postings — often expired/stale aggregator reposts
+            if "dice.com" in real_url or "dice.com" in adzuna_link:
+                continue
+
             s_min = item.get("salary_min")
             s_max = item.get("salary_max")
             salary = ""
@@ -278,6 +282,107 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
     except Exception as e:
         log.warning(f"  Adzuna error ('{keyword}' page {page}): {e}")
     return jobs
+
+# ── Y Combinator / HN Who's Hiring ───────────────────────────────────────────
+
+YC_JAVA_KEYWORDS = ["java", "spring boot", "spring", "backend", "microservice",
+                    "kafka", "kubernetes", "distributed", "jvm", "kotlin"]
+
+def search_yc_hiring() -> list:
+    """
+    Fetches the latest HN 'Ask HN: Who is Hiring?' thread via Algolia API.
+    Filters comments containing Java/backend keywords.
+    No API key required. Works from GitHub Actions.
+    """
+    jobs = []
+    try:
+        # Step 1: Find latest Who's Hiring thread
+        search_url = (
+            "https://hn.algolia.com/api/v1/search"
+            "?query=Ask+HN%3A+Who+is+hiring%3F"
+            "&tags=story,ask_hn"
+            "&hitsPerPage=3"
+        )
+        req = urllib.request.Request(search_url, headers={"User-Agent": "JobHunter/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+
+        hits = data.get("hits", [])
+        if not hits:
+            log.warning("YC: No 'Who is hiring' thread found")
+            return []
+
+        thread = hits[0]
+        story_id = thread.get("objectID")
+        thread_title = thread.get("title", "")
+        log.info(f"  YC thread: {thread_title} (id={story_id})")
+
+        # Step 2: Fetch comments (job posts) from the thread
+        comments_url = (
+            f"https://hn.algolia.com/api/v1/search"
+            f"?tags=comment,story_{story_id}"
+            f"&hitsPerPage=500"
+        )
+        req2 = urllib.request.Request(comments_url, headers={"User-Agent": "JobHunter/1.0"})
+        with urllib.request.urlopen(req2, timeout=15) as resp2:
+            comments_data = json.loads(resp2.read().decode())
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=35)  # HN thread is monthly
+
+        for comment in comments_data.get("hits", []):
+            text = (comment.get("comment_text") or "").lower()
+            if not text:
+                continue
+
+            # Must mention Java or backend keywords
+            if not any(kw in text for kw in YC_JAVA_KEYWORDS):
+                continue
+
+            # Skip if not USA-based (rough check)
+            if not any(loc in text for loc in ["usa", "us only", "united states",
+                                                "remote", "new york", "san francisco",
+                                                "seattle", "austin", "chicago", "boston",
+                                                "anywhere"]):
+                continue
+
+            # Extract salary if mentioned
+            salary = ""
+            sal_match = re.search(r"\$(\d+)[k]?\s*[-–]\s*\$?(\d+)k?", text)
+            if sal_match:
+                a, b = sal_match.group(1), sal_match.group(2)
+                salary = f"${a}k-${b}k" if len(a) <= 3 else f"${int(a)//1000}k-${int(b)//1000}k"
+
+            # Detect remote
+            is_remote = any(x in text for x in ["remote", "work from home", "wfh", "anywhere"])
+            location  = "Remote" if is_remote else "USA"
+
+            # Try to extract company name from first line
+            raw_text   = comment.get("comment_text") or ""
+            first_line = re.sub(r"<[^>]+>", "", raw_text).strip().split("\n")[0][:80]
+            company    = first_line if first_line else "HN Company"
+
+            comment_id = comment.get("objectID", "")
+            hn_url     = f"https://news.ycombinator.com/item?id={comment_id}"
+
+            jobs.append({
+                "title":      "Java/Backend Engineer",
+                "company":    company,
+                "location":   location,
+                "salary":     salary,
+                "type":       "Full-time",
+                "posted":     (comment.get("created_at") or "")[:10],
+                "url":        hn_url,
+                "adzuna_url": hn_url,
+                "source":     "YCombinator",
+            })
+
+        log.info(f"  YC: {len(jobs)} Java/backend jobs found")
+
+    except Exception as e:
+        log.warning(f"  YC error: {e}")
+
+    return jobs
+
 
 # ── Relevance filter ──────────────────────────────────────────────────────────
 
@@ -338,6 +443,7 @@ def filter_relevant(jobs: list, min_score: int = 15) -> list:
 
 def build_html_email(new_jobs: list) -> str:
     vendor_jobs = [j for j in new_jobs if is_target_vendor(j)]
+    yc_jobs     = [j for j in new_jobs if j.get("source") == "YCombinator"]
     contract    = [j for j in new_jobs if j["type"] == "Contract"]
     fulltime    = [j for j in new_jobs if j["type"] == "Full-time"]
     other       = [j for j in new_jobs if j["type"] == "Contract/FT"]
@@ -393,6 +499,7 @@ def build_html_email(new_jobs: list) -> str:
       <div style="max-width:900px;margin:0 auto">
         <h2 style="color:#34d399;margin-bottom:4px">🎯 {len(new_jobs)} New Java Jobs Found</h2>
         <p style="color:#64748b;margin:0 0 20px">{datetime.now().strftime('%B %d, %Y %H:%M')} — Contract + Full-time across USA</p>
+        {section("🚀 Y Combinator — Who's Hiring", yc_jobs, "#f97316")}
         {section("🎯 Target Staffing Vendors", vendor_jobs, "#f59e0b")}
         {section("📋 Contract Roles", contract, "#34d399")}
         {section("💼 Full-time Roles", fulltime, "#60a5fa")}
@@ -457,6 +564,18 @@ def run_search():
                     job["found_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
                     new_jobs.append(job)
             time.sleep(0.5)
+
+    # ── Y Combinator Who's Hiring ─────────────────────────────────────────────
+    log.info("  --- Y Combinator Who's Hiring ---")
+    yc_batch = search_yc_hiring()
+    for job in yc_batch:
+        if not job.get("url"):
+            continue
+        jid = job_id(job["url"])
+        if jid not in seen:
+            seen.add(jid)
+            job["found_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            new_jobs.append(job)
 
     # ── Staffing vendor searches ───────────────────────────────────────────────
     log.info("  --- Staffing vendor searches ---")
