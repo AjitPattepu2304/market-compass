@@ -71,7 +71,9 @@ VENDOR_SEARCHES = [
 
 # Target staffing companies — matched against Adzuna's company field in results
 TARGET_VENDORS = [
-    "judge group", "judge", "teksystems", "tek systems",
+    # US Staffing Firms
+    "judge group", "judge",
+    "teksystems", "tek systems",
     "ust global", "ust",
     "randstad", "randstad technologies", "randstad digital",
     "insight global",
@@ -81,8 +83,28 @@ TARGET_VENDORS = [
     "experis", "manpowergroup", "manpower",
     "kforce",
     "tekrecruiter",
-    "cognizant", "hcl", "infosys", "wipro", "epam",
     "west monroe",
+    "cyient", "mastech", "softpath", "mindlance",
+    "collabera", "genesis10", "pearson frank",
+    "russell tobin", "motion recruitment",
+    "spherion", "staffmark", "staffworks",
+    # Big IT / Consulting / Offshore
+    "infosys", "infosys bpo",
+    "cognizant", "cognizant technology",
+    "tcs", "tata consultancy",
+    "wipro",
+    "hcl", "hcltech",
+    "capgemini",
+    "ibm", "ibm consulting",
+    "accenture",
+    "epam",
+    "ltimindtree", "lti", "mindtree",
+    "mphasis",
+    "tech mahindra",
+    "hexaware",
+    "birlasoft",
+    "niit technologies",
+    "persistent systems",
 ]
 
 # No location filter — search all USA, results include location column
