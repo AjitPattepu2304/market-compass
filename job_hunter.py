@@ -187,6 +187,8 @@ def search_adzuna(keyword: str, page: int = 1) -> list:
         "app_key":          ADZUNA_APP_KEY,
         "results_per_page": RESULTS_PER_PAGE,
         "what":             keyword,
+        "days_old":         3,       # only jobs posted in last 3 days
+        "sort_by":          "date",  # newest first
         "content-type":     "application/json",
     }
     url = f"https://api.adzuna.com/v1/api/jobs/us/search/{page}?{urllib.parse.urlencode(params)}"
