@@ -13,6 +13,17 @@
 	<name>MarketCompass LLM</name>
 	<description>LLM Question and Answer service for investment advice using Ollama/LLaMA</description>
 
+	<repositories>
+		<!-- Add Maven Central to fetch Spring AI -->
+		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+		</repository>
+	</repositories>
+
 	<dependencies>
 		<!-- Spring Boot Web -->
 		<dependency>
@@ -20,16 +31,18 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI Core -->
+		<!-- Spring AI Core - explicit version to avoid BOM issues -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-core</artifactId>
+			<version>0.8.1</version>
 		</dependency>
 
-		<!-- Spring AI Ollama -->
+		<!-- Spring AI Ollama - explicit version -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-ollama</artifactId>
+			<version>0.8.1</version>
 		</dependency>
 
 		<!-- HTTP client for Ollama API calls -->
