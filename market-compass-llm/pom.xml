@@ -11,16 +11,21 @@
 
 	<artifactId>market-compass-llm</artifactId>
 	<name>MarketCompass LLM</name>
-	<description>LLM Question and Answer service for investment advice using Ollama/LLaMA</description>
+	<description>LLM Question and Answer service for investment advice using Ollama and LLaMA</description>
 
+	<!-- Override repository order to prioritize Maven Central -->
 	<repositories>
-		<!-- Add Maven Central to fetch Spring AI -->
 		<repository>
 			<id>central</id>
 			<url>https://repo.maven.apache.org/maven2</url>
 			<releases>
 				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
 			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>always</updatePolicy>
+			</snapshots>
 		</repository>
 	</repositories>
 
@@ -31,14 +36,14 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI Core - explicit version to avoid BOM issues -->
+		<!-- Spring AI Core - explicit version from Maven Central -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-core</artifactId>
 			<version>0.8.1</version>
 		</dependency>
 
-		<!-- Spring AI Ollama - explicit version -->
+		<!-- Spring AI Ollama - explicit version from Maven Central -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-ollama</artifactId>
