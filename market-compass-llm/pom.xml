@@ -11,7 +11,7 @@
 
 	<artifactId>market-compass-llm</artifactId>
 	<name>MarketCompass LLM</name>
-	<description>LLM Q&A service for investment advice using Ollama/LLaMA</description>
+	<description>LLM Question and Answer service for investment advice using Ollama/LLaMA</description>
 
 	<dependencies>
 		<!-- Spring Boot Web -->
