@@ -20,10 +20,16 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI with Ollama support -->
+		<!-- Spring AI Core -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
+			<artifactId>spring-ai-core</artifactId>
+		</dependency>
+
+		<!-- Spring AI Ollama -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-ollama</artifactId>
 		</dependency>
 
 		<!-- HTTP client for Ollama API calls -->
