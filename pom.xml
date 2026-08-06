@@ -2,6 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
@@ -10,44 +11,29 @@
 	</parent>
 
 	<groupId>com.marketcompass</groupId>
-	<artifactId>market-compass</artifactId>
+	<artifactId>market-compass-parent</artifactId>
 	<version>1.0.0</version>
-	<name>MarketCompass</name>
-	<description>
-		MarketCompass — An investment study hub for learning stocks, ETFs, dividends,
-		semiconductor sector analysis, and portfolio tracking. Includes an AI-style
-		brokerage agent that scans for value, income, and growth opportunities.
-	</description>
+	<packaging>pom</packaging>
+	<name>MarketCompass Parent</name>
+	<description>Parent POM for MarketCompass multi-module project</description>
+
+	<modules>
+		<module>market-compass-core</module>
+		<module>market-compass-llm</module>
+	</modules>
 
 	<properties>
 		<java.version>21</java.version>
 	</properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-devtools</artifactId>
-			<scope>runtime</scope>
-			<optional>true</optional>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+	<repositories>
+		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+		</repository>
+	</repositories>
 
 </project>
