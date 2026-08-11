@@ -2,12 +2,11 @@ package com.marketcompass.llm.controller;
 
 import com.marketcompass.llm.dto.SetupRequest;
 import com.marketcompass.llm.dto.TranscribeResponse;
-import com.marketcompass.llm.groq.GroqLLMService;
 import com.marketcompass.llm.groq.GroqSpeechService;
+import com.marketcompass.llm.groq.LiveInterviewService;
 import com.marketcompass.llm.service.LLMService;
 import com.marketcompass.llm.service.SpeechService;
 import jakarta.servlet.http.HttpSession;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +18,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/stt")
-@Slf4j
 public class SpeechController {
     @Autowired(required = false) private SpeechService localSpeechService;
     @Autowired(required = false) private LLMService localLLMService;
     @Autowired(required = false) private GroqSpeechService groqSpeechService;
-    @Autowired(required = false) private GroqLLMService groqLLMService;
+    @Autowired(required = false) private LiveInterviewService liveInterviewService;
 
     @PostMapping("/setup")
     public ResponseEntity<String> setup(@RequestBody SetupRequest request, HttpSession session) {
@@ -56,8 +54,8 @@ public class SpeechController {
         if (history == null) history = new ArrayList<>();
 
         String answer;
-        if (groqLLMService != null) {
-            answer = groqLLMService.answerLiveConversation(conversation, jd, resume, history);
+        if (liveInterviewService != null) {
+            answer = liveInterviewService.answer(conversation, jd, resume, history);
         } else {
             String prompt = "LIVE INTERVIEW ROLLING TRANSCRIPT:\n" + conversation +
                     "\n\nIdentify the latest interviewer question/follow-up and answer it as the candidate in first person. " +
@@ -71,7 +69,7 @@ public class SpeechController {
         session.setAttribute("history", history);
 
         return ResponseEntity.ok(TranscribeResponse.builder().transcript(conversation).answer(answer)
-                .model(groqLLMService != null ? "groq/live-interview" : "ollama/live-interview").build());
+                .model(liveInterviewService != null ? "groq/live-interview" : "ollama/live-interview").build());
     }
 
     @PostMapping("/ask")
