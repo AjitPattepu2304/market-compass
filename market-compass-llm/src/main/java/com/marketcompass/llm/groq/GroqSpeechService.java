@@ -42,16 +42,36 @@ public class GroqSpeechService {
         }
 
         byte[] audioBytes = audio.getBytes();
+        String contentType = audio.getContentType();
+        if (contentType == null || contentType.isBlank()) {
+            contentType = "audio/webm";
+        }
+
+        MediaType mediaType;
+        try {
+            mediaType = MediaType.parseMediaType(contentType);
+        } catch (IllegalArgumentException e) {
+            mediaType = MediaType.parseMediaType("audio/webm");
+            contentType = "audio/webm";
+        }
+
+        String filename = audio.getOriginalFilename();
+        if (filename == null || filename.isBlank()) {
+            filename = contentType.contains("mp4") || contentType.contains("m4a")
+                    ? "question.m4a"
+                    : "question.webm";
+        }
+
         log.info("Groq STT: {} bytes, filename={}, contentType={}, model={}",
-                audioBytes.length, audio.getOriginalFilename(), audio.getContentType(), sttModel);
+                audioBytes.length, filename, contentType, sttModel);
 
         MultipartBodyBuilder body = new MultipartBodyBuilder();
         body.part("file", new ByteArrayResource(audioBytes) {
             @Override
             public String getFilename() {
-                return "live.webm";
+                return filename;
             }
-        }).contentType(MediaType.parseMediaType("audio/webm"));
+        }).contentType(mediaType);
         body.part("model", sttModel);
         body.part("language", "en");
         body.part("response_format", "json");
@@ -67,8 +87,6 @@ public class GroqSpeechService {
                     .bodyToMono(Map.class)
                     .block();
 
-            // Do not use Map<?, ?>.getOrDefault(key, String) because the wildcard
-            // value type prevents javac from accepting the String default value.
             Object textValue = response == null ? null : response.get("text");
             String transcript = textValue == null ? "" : textValue.toString();
 
@@ -87,7 +105,7 @@ public class GroqSpeechService {
                                                 List<Map<String, String>> history) throws Exception {
         String transcript = transcribe(audio);
         String answer = transcript.isBlank()
-                ? "Could not transcribe audio. Please try speaking more clearly."
+                ? "Could not transcribe audio. Please try again."
                 : groqLLMService.answerQuestion(transcript, jobDescription, resume, history);
 
         return TranscribeResponse.builder()
