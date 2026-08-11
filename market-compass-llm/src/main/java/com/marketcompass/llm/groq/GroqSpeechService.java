@@ -62,16 +62,19 @@ public class GroqSpeechService {
                     : "question.webm";
         }
 
+        final MediaType uploadMediaType = mediaType;
+        final String uploadFilename = filename;
+
         log.info("Groq STT: {} bytes, filename={}, contentType={}, model={}",
-                audioBytes.length, filename, contentType, sttModel);
+                audioBytes.length, uploadFilename, contentType, sttModel);
 
         MultipartBodyBuilder body = new MultipartBodyBuilder();
         body.part("file", new ByteArrayResource(audioBytes) {
             @Override
             public String getFilename() {
-                return filename;
+                return uploadFilename;
             }
-        }).contentType(mediaType);
+        }).contentType(uploadMediaType);
         body.part("model", sttModel);
         body.part("language", "en");
         body.part("response_format", "json");
