@@ -28,8 +28,9 @@ public class SpeechController {
         session.setAttribute("jobDescription", request.getJobDescription());
         session.setAttribute("resume", request.getResume());
         session.setAttribute("history", new ArrayList<Map<String, String>>());
-        log.info("Session setup complete — JD and resume stored");
-        return ResponseEntity.ok("Setup complete");
+        session.setAttribute("sessionActive", true);
+        log.info("Interview session started — JD and resume stored");
+        return ResponseEntity.ok("Session started");
     }
 
     @PostMapping("/transcribe")
@@ -45,9 +46,17 @@ public class SpeechController {
     @PostMapping("/ask")
     public ResponseEntity<TranscribeResponse> transcribeAndAsk(@RequestParam("audio") MultipartFile audio,
                                                                 HttpSession session) throws Exception {
+        Boolean active = (Boolean) session.getAttribute("sessionActive");
+        if (!Boolean.TRUE.equals(active)) {
+            return ResponseEntity.badRequest().body(TranscribeResponse.builder()
+                    .transcript("")
+                    .answer("The interview session has ended. Start a new session to continue.")
+                    .build());
+        }
+
         log.info("Transcribe + ask: {} bytes", audio.getSize());
-        String jd      = (String) session.getAttribute("jobDescription");
-        String resume  = (String) session.getAttribute("resume");
+        String jd = (String) session.getAttribute("jobDescription");
+        String resume = (String) session.getAttribute("resume");
         @SuppressWarnings("unchecked")
         List<Map<String, String>> history = (List<Map<String, String>>) session.getAttribute("history");
         if (history == null) history = new ArrayList<>();
@@ -56,7 +65,6 @@ public class SpeechController {
                 ? groqSpeechService.transcribeAndAsk(audio, jd, resume, history)
                 : localSpeechService.transcribeAndAsk(audio, jd, resume, history);
 
-        // append this turn to history
         history.add(Map.of("role", "user", "content", response.getTranscript()));
         history.add(Map.of("role", "assistant", "content", response.getAnswer()));
         session.setAttribute("history", history);
@@ -64,10 +72,18 @@ public class SpeechController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/end-session")
+    public ResponseEntity<String> endSession(HttpSession session) {
+        session.setAttribute("sessionActive", false);
+        log.info("Interview session ended");
+        return ResponseEntity.ok("Session ended");
+    }
+
     @PostMapping("/reset-history")
     public ResponseEntity<String> resetHistory(HttpSession session) {
         session.setAttribute("history", new ArrayList<Map<String, String>>());
-        return ResponseEntity.ok("History cleared");
+        session.setAttribute("sessionActive", false);
+        return ResponseEntity.ok("Session reset");
     }
 
     private boolean isGroq() {
