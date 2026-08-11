@@ -1,21 +1,20 @@
 FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 
-# copy maven wrapper from repo root
+# copy maven wrapper
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
-# copy only the llm module (skip core to avoid missing module errors)
+# copy both module poms so parent can resolve them
+COPY market-compass-core/pom.xml market-compass-core/pom.xml
 COPY market-compass-llm/pom.xml market-compass-llm/pom.xml
 
-# strip market-compass-core module from parent pom so Maven doesn't look for it
-RUN sed -i 's|<module>market-compass-core</module>||g' pom.xml
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress -pl market-compass-llm -am
 
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress -pl market-compass-llm
-
+# copy only llm source and build
 COPY market-compass-llm/src market-compass-llm/src
 
-RUN ./mvnw package -DskipTests -q --no-transfer-progress -pl market-compass-llm
+RUN ./mvnw package -DskipTests -q --no-transfer-progress -pl market-compass-llm -am
 
 FROM eclipse-temurin:21-jre-alpine
 COPY --from=builder /app/market-compass-llm/target/*.jar app.jar
