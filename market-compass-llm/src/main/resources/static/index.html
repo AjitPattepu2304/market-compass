@@ -3,341 +3,146 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interview Assistant</title>
+  <title>MarketCompass — Interview Practice</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: #0d0d0d;
-      color: #c9c9c9;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 48px 20px 80px;
+    :root {
+      --bg:#0b0f14; --panel:#111720; --panel2:#151d28; --border:#253041;
+      --text:#e8edf4; --muted:#8491a3; --faint:#596577; --accent:#39d98a;
+      --accent2:#173d2d; --danger:#ef6b73; --blue:#65a8ff; --shadow:0 12px 40px rgba(0,0,0,.22);
     }
-
-    .header { text-align: center; margin-bottom: 40px; }
-    .header h1 { font-size: 22px; font-weight: 600; color: #e0e0e0; letter-spacing: -0.3px; }
-    .header p  { font-size: 13px; color: #4a4a4a; margin-top: 6px; }
-    .dot {
-      display: inline-block; width: 7px; height: 7px;
-      border-radius: 50%; background: #2a6b4a;
-      margin-right: 8px; vertical-align: middle;
-    }
-
-    /* ── Setup ── */
-    #setup { width: 100%; max-width: 680px; }
-
-    .card {
-      width: 100%; max-width: 680px;
-      background: #141414; border: 1px solid #1f1f1f;
-      border-radius: 14px; padding: 20px 24px; margin-bottom: 14px;
-    }
-    .card-label {
-      font-size: 10px; font-weight: 500; text-transform: uppercase;
-      letter-spacing: 1.4px; color: #3a3a3a; margin-bottom: 12px;
-    }
-    textarea {
-      width: 100%; background: #0d0d0d; border: 1px solid #1e1e1e;
-      border-radius: 8px; color: #b0b0b0; font-size: 13.5px;
-      line-height: 1.7; padding: 12px 14px; resize: vertical;
-      min-height: 110px; font-family: inherit; transition: border-color 0.2s;
-    }
-    textarea:focus { outline: none; border-color: #2a4a3a; }
-    textarea::placeholder { color: #2e2e2e; }
-
-    .btn-primary {
-      width: 100%; max-width: 680px; padding: 13px;
-      background: #1a3a2a; color: #5aad7a; border: 1px solid #1f4a34;
-      border-radius: 10px; font-size: 14px; font-weight: 500;
-      cursor: pointer; transition: background 0.2s, color 0.2s;
-      margin-bottom: 14px; font-family: inherit;
-    }
-    .btn-primary:hover { background: #1f4a34; color: #6abf8a; }
-    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    /* ── Interview ── */
-    #interview { display: none; width: 100%; max-width: 680px; flex-direction: column; align-items: center; }
-
-    .session-bar {
-      width: 100%; display: flex; align-items: center;
-      justify-content: space-between; margin-bottom: 20px;
-    }
-    .badge {
-      display: inline-block; background: #1a3a2a; color: #3a7a5a;
-      font-size: 10px; font-weight: 500; padding: 2px 8px;
-      border-radius: 4px; letter-spacing: 0.5px; margin-left: 8px;
-    }
-    .btn-reset {
-      background: none; border: 1px solid #1e1e1e; color: #3a3a3a;
-      border-radius: 8px; padding: 8px 16px; font-size: 12px;
-      cursor: pointer; font-family: inherit; transition: color 0.2s, border-color 0.2s;
-    }
-    .btn-reset:hover { color: #666; border-color: #333; }
-
-    /* ── Controls ── */
-    .controls { display: flex; gap: 10px; width: 100%; max-width: 680px; margin-bottom: 8px; }
-    .btn-record {
-      flex: 1; padding: 13px; border: none; border-radius: 10px;
-      font-size: 14px; font-weight: 500; cursor: pointer;
-      font-family: inherit; transition: opacity 0.2s, background 0.2s;
-    }
-    .btn-record:disabled { opacity: 0.25; cursor: not-allowed; }
-    #startBtn { background: #1a3a2a; color: #5aad7a; border: 1px solid #1f4a34; }
-    #startBtn:not(:disabled):hover { background: #1f4a34; }
-    #stopBtn  { background: #3a1a1a; color: #ad5a5a; border: 1px solid #4a1f1f; }
-    #stopBtn:not(:disabled):hover  { background: #4a1f1f; }
-
-    .status {
-      font-size: 12px; color: #3a3a3a; height: 16px;
-      margin-bottom: 14px; width: 100%; max-width: 680px;
-    }
-    .status.active { color: #4a7a5a; }
-    .status.done   { color: #3a6a4a; }
-    .status.error  { color: #7a3a3a; }
-
-    /* ── Conversation thread ── */
-    #thread { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 14px; }
-
-    .turn { width: 100%; }
-
-    .turn-question {
-      background: #111; border: 1px solid #1a1a1a;
-      border-radius: 10px 10px 0 0; padding: 12px 16px;
-      font-size: 12px; color: #5a7a6a; border-bottom: none;
-    }
-    .turn-question span { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #2e4a3a; margin-right: 8px; }
-
-    .turn-answer {
-      background: #141414; border: 1px solid #1f1f1f;
-      border-radius: 0 0 10px 10px; padding: 18px 20px;
-    }
-
-    /* ── Markdown rendered content ── */
-    .md-body { font-size: 14px; line-height: 1.8; color: #b8b8b8; }
-    .md-body p  { margin-bottom: 10px; }
-    .md-body p:last-child { margin-bottom: 0; }
-    .md-body ul, .md-body ol { padding-left: 20px; margin-bottom: 10px; }
-    .md-body li { margin-bottom: 4px; }
-    .md-body strong { color: #d0d0d0; font-weight: 600; }
-    .md-body em { color: #9a9a9a; }
-    .md-body h1, .md-body h2, .md-body h3 {
-      color: #d0d0d0; font-weight: 600; margin: 14px 0 8px;
-    }
-    .md-body h1 { font-size: 16px; }
-    .md-body h2 { font-size: 15px; }
-    .md-body h3 { font-size: 14px; }
-    .md-body code {
-      background: #1a1a1a; color: #7abf9a;
-      padding: 2px 6px; border-radius: 4px;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 12.5px;
-    }
-    .md-body pre {
-      background: #111; border: 1px solid #1e1e1e;
-      border-radius: 8px; padding: 14px 16px;
-      overflow-x: auto; margin: 10px 0;
-    }
-    .md-body pre code {
-      background: none; color: inherit; padding: 0;
-      font-size: 13px; line-height: 1.6;
-    }
-    .md-body blockquote {
-      border-left: 3px solid #2a4a3a; padding-left: 12px;
-      color: #6a6a6a; margin: 10px 0;
-    }
-    .md-body table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
-    .md-body th, .md-body td { border: 1px solid #1e1e1e; padding: 8px 12px; text-align: left; }
-    .md-body th { background: #1a1a1a; color: #d0d0d0; }
-
-    /* ── Thinking placeholder ── */
-    .thinking { color: #2e4a3a; font-size: 13px; font-style: italic; }
-
-    @keyframes pulse-ring {
-      0%   { box-shadow: 0 0 0 0 rgba(90, 173, 122, 0.15); }
-      70%  { box-shadow: 0 0 0 10px rgba(90, 173, 122, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(90, 173, 122, 0); }
-    }
-    .recording { animation: pulse-ring 1.4s infinite; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;display:flex;flex-direction:column}
+    .topbar{height:64px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(11,15,20,.96);position:sticky;top:0;z-index:20}
+    .brand{display:flex;align-items:center;gap:11px}.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#1b7650,#38d98a);display:grid;place-items:center;color:#06130d;font-weight:800}.brand h1{font-size:15px}.brand p{font-size:11px;color:var(--muted);margin-top:2px}
+    .top-actions{display:flex;align-items:center;gap:10px}.status-pill{display:flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--panel);padding:7px 11px;border-radius:999px;font-size:11px;color:var(--muted)}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px rgba(57,217,138,.5)}
+    .btn{border:1px solid var(--border);background:var(--panel2);color:var(--text);padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600}.btn:hover{border-color:#3b4a5f;background:#19222e}.btn-primary{background:var(--accent);border-color:var(--accent);color:#07140e}.btn-primary:hover{background:#55e6a0}.btn-ghost{background:transparent;color:var(--muted)}
+    .layout{display:grid;grid-template-columns:250px minmax(0,1fr) 285px;min-height:calc(100vh - 64px)}
+    .sidebar,.rightbar{background:#0e141c;border-right:1px solid var(--border)}.rightbar{border-right:0;border-left:1px solid var(--border);padding:20px 16px}
+    .sidebar{padding:18px 12px}.section-label{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--faint);font-weight:700;padding:8px 10px}.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;color:var(--muted);font-size:12px;margin:2px 0}.nav-item.active{background:#16231e;color:#74e5a8}.nav-item:hover{background:#151e29;color:var(--text)}
+    .session-card{border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:12px;margin-top:10px}.session-title{font-size:12px;font-weight:650}.session-meta{font-size:10px;color:var(--faint);margin-top:5px}.session-active{border-color:#24543d;background:#102019}
+    .main{padding:24px 28px;min-width:0}.main-inner{max-width:900px;margin:0 auto}.page-title{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.page-title h2{font-size:22px;letter-spacing:-.4px}.page-title p{font-size:12px;color:var(--muted);margin-top:5px}.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow)}.panel h3{font-size:12px;margin-bottom:10px}.panel-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;font-weight:700;margin-bottom:9px}.textarea{width:100%;min-height:230px;resize:vertical;background:#0c1118;border:1px solid var(--border);border-radius:9px;color:var(--text);padding:12px;font-size:12px;line-height:1.65;outline:0}.textarea:focus{border-color:#367455}.setup-actions{display:flex;align-items:center;justify-content:space-between;margin-top:14px}.hint{font-size:10px;color:var(--faint)}
+    .interview{display:none}.interview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.session-title-large{font-size:15px;font-weight:650}.session-sub{font-size:11px;color:var(--muted);margin-top:3px}.live-controls{display:flex;gap:8px}.record-btn{min-width:150px;padding:11px 16px;border-radius:9px;border:1px solid #286c4b;background:#143a28;color:#79e9ad;font-size:12px;font-weight:700}.record-btn.recording{background:#451e24;border-color:#6f3038;color:#ff9ba1}.record-btn:disabled{opacity:.35;cursor:not-allowed}
+    .status-line{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);background:#0e141c;padding:9px 12px;border-radius:8px;margin-bottom:14px;font-size:11px;color:var(--muted)}.status-line.active{border-color:#27543e;color:#7de3aa}.status-line.error{border-color:#5b2a31;color:#f08a92}.status-line.done{color:#7de3aa}
+    .thread{display:flex;flex-direction:column;gap:14px}.turn{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--panel)}.turn-head{display:flex;align-items:center;gap:8px;padding:10px 13px;background:#0e141c;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}.turn-head .qnum{margin-left:auto;color:var(--faint);text-transform:none;letter-spacing:0}.turn-question{padding:14px 16px;color:#d9e1eb;font-size:13px;line-height:1.6;border-bottom:1px solid var(--border)}.turn-answer{padding:17px 18px}.md-body{font-size:13px;line-height:1.75;color:#bdc7d3}.md-body p{margin-bottom:9px}.md-body p:last-child{margin-bottom:0}.md-body strong{color:#edf2f7}.md-body ul,.md-body ol{padding-left:21px;margin:8px 0}.md-body li{margin-bottom:4px}.md-body pre{background:#0b1016;border:1px solid var(--border);border-radius:8px;padding:13px;overflow:auto;margin:10px 0}.md-body code{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px}.md-body :not(pre)>code{background:#202a36;padding:2px 5px;border-radius:4px;color:#86e6b1}.md-body table{border-collapse:collapse;width:100%;margin:10px 0}.md-body th,.md-body td{border:1px solid var(--border);padding:7px 9px;text-align:left}.md-body th{background:#18202b;color:#e6edf5}
+    .empty{padding:45px 20px;text-align:center;border:1px dashed var(--border);border-radius:12px;color:var(--muted);font-size:12px}.empty strong{display:block;color:var(--text);margin-bottom:5px;font-size:14px}.thinking{color:#72927f;font-style:italic}
+    .right-section{margin-bottom:20px}.right-section h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--faint);margin-bottom:10px}.context-item{border:1px solid var(--border);background:var(--panel);border-radius:9px;padding:11px;margin-bottom:8px}.context-item .label{font-size:10px;color:var(--muted)}.context-item .value{font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.progress{height:6px;background:#202a35;border-radius:99px;overflow:hidden}.progress span{display:block;height:100%;width:0;background:var(--accent);border-radius:99px}.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:11px}.stat .n{font-size:17px;font-weight:700}.stat .l{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.7px;margin-top:3px}.tip{font-size:11px;line-height:1.6;color:var(--muted);background:#111c18;border:1px solid #234435;padding:11px;border-radius:9px}.tip strong{color:#8ce8b4}
+    .mobile-only{display:none}
+    @media(max-width:1050px){.layout{grid-template-columns:210px minmax(0,1fr)}.rightbar{display:none}.main{padding:20px}.setup-grid{grid-template-columns:1fr}}
+    @media(max-width:700px){.topbar{padding:0 14px}.top-actions .status-pill{display:none}.layout{display:block}.sidebar{display:none}.main{padding:16px 12px}.mobile-only{display:block}.page-title h2{font-size:19px}.live-controls{width:100%}.interview-header{display:block}.live-controls{margin-top:12px}.record-btn{flex:1}.setup-grid{grid-template-columns:1fr}.textarea{min-height:170px}.main-inner{max-width:none}}
   </style>
 </head>
 <body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">M</div><div><h1>MarketCompass</h1><p>Interview Practice Workspace</p></div></div>
+    <div class="top-actions"><div class="status-pill"><span class="status-dot"></span><span id="topStatus">Ready</span></div><button class="btn btn-ghost" id="newSessionTop">New session</button></div>
+  </header>
 
-  <div class="header">
-    <h1><span class="dot"></span>Interview Assistant</h1>
-    <p>Speak naturally — get answers tailored to your resume</p>
-  </div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="section-label">Workspace</div>
+      <div class="nav-item active">🎙️ Interview Practice</div>
+      <div class="nav-item">📄 Resume & JD</div>
+      <div class="nav-item">📝 Session History</div>
+      <div class="section-label" style="margin-top:14px">Recent Sessions</div>
+      <div class="session-card session-active"><div class="session-title">Current session</div><div class="session-meta" id="sessionMeta">Not started</div></div>
+      <div class="session-card"><div class="session-title">Java Backend Practice</div><div class="session-meta">Previous session</div></div>
+      <div class="session-card"><div class="session-title">Spring Boot Practice</div><div class="session-meta">Previous session</div></div>
+      <div class="section-label" style="margin-top:18px">Practice Mode</div>
+      <div class="nav-item">☑️ Technical Q&A</div>
+      <div class="nav-item">💬 Behavioral</div>
+      <div class="nav-item">🏗️ System Design</div>
+      <div style="margin-top:auto;padding:18px 8px 4px;color:#4e5a69;font-size:10px;line-height:1.5">For interview preparation and mock practice. Use during authorized practice sessions.</div>
+    </aside>
 
-  <!-- ── Setup ── -->
-  <div id="setup">
-    <div class="card">
-      <div class="card-label">Job Description</div>
-      <textarea id="jdInput" placeholder="Paste the job description..."></textarea>
-    </div>
-    <div class="card">
-      <div class="card-label">Your Resume</div>
-      <textarea id="resumeInput" placeholder="Paste your resume..."></textarea>
-    </div>
-    <button class="btn-primary" id="setupBtn">Begin Session →</button>
-  </div>
-
-  <!-- ── Interview ── -->
-  <div id="interview">
-    <div class="session-bar">
-      <span style="font-size:12px;color:#3a3a3a;">Session active <span class="badge">context loaded</span></span>
-      <button class="btn-reset" id="resetBtn">↩ Change context</button>
-    </div>
-
-    <div class="controls">
-      <button class="btn-record" id="startBtn">▶ &nbsp;Record</button>
-      <button class="btn-record" id="stopBtn" disabled>⏹ &nbsp;Stop &amp; Answer</button>
-    </div>
-
-    <div class="status" id="status"></div>
-
-    <div id="thread"></div>
-  </div>
-
-  <script>
-    marked.setOptions({
-      highlight: (code, lang) => {
-        if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
-        return hljs.highlightAuto(code).value;
-      },
-      breaks: true,
-      gfm: true
-    });
-
-    let mediaRecorder, chunks = [];
-
-    const setupDiv     = document.getElementById('setup');
-    const interviewDiv = document.getElementById('interview');
-    const setupBtn     = document.getElementById('setupBtn');
-    const startBtn     = document.getElementById('startBtn');
-    const stopBtn      = document.getElementById('stopBtn');
-    const resetBtn     = document.getElementById('resetBtn');
-    const statusEl     = document.getElementById('status');
-    const thread       = document.getElementById('thread');
-
-    function setStatus(msg, type = '') {
-      statusEl.textContent = msg;
-      statusEl.className = 'status ' + type;
-    }
-
-    function addTurn(question, answerHtml, pending = false) {
-      const turn = document.createElement('div');
-      turn.className = 'turn';
-      turn.innerHTML = `
-        <div class="turn-question"><span>Q</span>${escapeHtml(question)}</div>
-        <div class="turn-answer">
-          <div class="md-body ${pending ? 'thinking' : ''}" id="answer-${Date.now()}">
-            ${pending ? 'Thinking...' : answerHtml}
+    <main class="main">
+      <div class="main-inner">
+        <section id="setup">
+          <div class="page-title"><div><h2>Start a practice session</h2><p>Load your role context once, then practice questions by voice.</p></div></div>
+          <div class="setup-grid">
+            <div class="panel"><div class="panel-label">Job description</div><textarea class="textarea" id="jdInput" placeholder="Paste the job description here...\n\nExample:\nJava Backend Developer\nSpring Boot, REST APIs, Microservices, Kafka..." ></textarea></div>
+            <div class="panel"><div class="panel-label">Your resume</div><textarea class="textarea" id="resumeInput" placeholder="Paste the resume or relevant experience here...\n\nFocus on skills, projects, technologies, and achievements you want the answers to reflect."></textarea></div>
           </div>
-        </div>`;
-      thread.appendChild(turn);
-      turn.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      return turn.querySelector('.md-body');
-    }
+          <div class="setup-actions"><span class="hint">Your context is used to tailor practice answers.</span><button class="btn btn-primary" id="setupBtn">Start practice session →</button></div>
+        </section>
 
-    function escapeHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+        <section id="interview" class="interview">
+          <div class="interview-header">
+            <div><div class="session-title-large">Java Backend Interview Practice</div><div class="session-sub" id="contextSummary">Context loaded · Ready for question 1</div></div>
+            <div class="live-controls"><button class="record-btn" id="startBtn">🎙 Start recording</button><button class="record-btn" id="stopBtn" disabled>⏹ Stop & answer</button></div>
+          </div>
+          <div class="status-line" id="statusLine"><span id="statusText">Ready for your first question.</span><span id="questionCount">0 questions</span></div>
+          <div id="thread" class="thread"><div class="empty" id="emptyState"><strong>Your practice session is ready</strong>Press <b>Start recording</b>, ask your question naturally, then stop to generate an answer.</div></div>
+        </section>
+      </div>
+    </main>
 
-    setupBtn.onclick = async () => {
-      const jd     = document.getElementById('jdInput').value.trim();
-      const resume = document.getElementById('resumeInput').value.trim();
-      if (!jd && !resume) { alert('Paste at least a job description or resume.'); return; }
-      setupBtn.disabled = true;
-      setupBtn.textContent = 'Setting up...';
-      const res = await fetch('/api/stt/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobDescription: jd, resume })
-      });
-      if (res.ok) {
-        thread.innerHTML = '';
-        setupDiv.style.display = 'none';
-        interviewDiv.style.display = 'flex';
-      } else {
-        setupBtn.disabled = false;
-        setupBtn.textContent = 'Begin Session →';
-        alert('Setup failed. Try again.');
-      }
-    };
+    <aside class="rightbar">
+      <div class="right-section"><h3>Session</h3><div class="stat-grid"><div class="stat"><div class="n" id="statQuestions">0</div><div class="l">Questions</div></div><div class="stat"><div class="n" id="statAnswered">0</div><div class="l">Answered</div></div></div></div>
+      <div class="right-section"><h3>Context</h3><div class="context-item"><div class="label">Target role</div><div class="value" id="roleValue">Not set</div></div><div class="context-item"><div class="label">Resume</div><div class="value" id="resumeValue">Not loaded</div></div><div class="context-item"><div class="label">Job description</div><div class="value" id="jdValue">Not loaded</div></div></div>
+      <div class="right-section"><h3>Session progress</h3><div class="progress"><span id="progressBar"></span></div><div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--faint)"><span>Started</span><span id="progressText">0 / 10</span></div></div>
+      <div class="right-section"><h3>Practice tip</h3><div class="tip"><strong>Keep answers interview-ready.</strong><br>Start with the direct answer, add a concrete example, then mention trade-offs or implementation details when useful.</div></div>
+      <div class="right-section"><button class="btn" id="changeContextBtn" style="width:100%">Change context</button></div>
+    </aside>
+  </div>
+</div>
 
-    resetBtn.onclick = async () => {
-      await fetch('/api/stt/reset-history', { method: 'POST' });
-      interviewDiv.style.display = 'none';
-      setupDiv.style.display = 'block';
-      setupBtn.disabled = false;
-      setupBtn.textContent = 'Begin Session →';
-      thread.innerHTML = '';
-    };
+<script>
+  marked.setOptions({breaks:true,gfm:true});
+  let mediaRecorder=null, chunks=[], questionNumber=0, sessionStarted=null;
+  const $=id=>document.getElementById(id);
+  const setup=$('setup'), interview=$('interview'), thread=$('thread');
 
-    startBtn.onclick = async () => {
-      try {
-        chunks = [];
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.onstop = sendAudio;
-        mediaRecorder.start();
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        stopBtn.classList.add('recording');
-        setStatus('● Recording...', 'active');
-      } catch {
-        setStatus('Microphone access denied', 'error');
-      }
-    };
+  function setStatus(text,type=''){$('statusText').textContent=text;$('statusLine').className='status-line '+type;$('topStatus').textContent=type==='active'?'Recording':type==='error'?'Error':type==='done'?'Ready':'Ready';}
+  function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+  function updateStats(){ $('questionCount').textContent=`${questionNumber} question${questionNumber===1?'':'s'}`;$('statQuestions').textContent=questionNumber;$('statAnswered').textContent=questionNumber;$('progressText').textContent=`${Math.min(questionNumber,10)} / 10`;$('progressBar').style.width=Math.min(questionNumber*10,100)+'%'; }
+  function addTurn(question,answer,pending=false){
+    const turn=document.createElement('article');turn.className='turn';
+    turn.innerHTML=`<div class="turn-head"><span>Interview question</span><span class="qnum">#${questionNumber}</span></div><div class="turn-question">${escapeHtml(question)}</div><div class="turn-answer"><div class="md-body ${pending?'thinking':''}">${pending?'Generating interview-ready answer...':answer}</div></div>`;
+    thread.appendChild(turn);turn.scrollIntoView({behavior:'smooth',block:'end'});return turn;
+  }
+  function resetThread(){thread.innerHTML='<div class="empty" id="emptyState"><strong>Your practice session is ready</strong>Press <b>Start recording</b>, ask your question naturally, then stop to generate an answer.</div>';questionNumber=0;updateStats();}
+  async function startSession(){
+    const jd=$('jdInput').value.trim(), resume=$('resumeInput').value.trim();
+    if(!jd&&!resume){alert('Paste at least a job description or resume.');return;}
+    $('setupBtn').disabled=true;$('setupBtn').textContent='Loading context...';
+    try{
+      const res=await fetch('/api/stt/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jobDescription:jd,resume})});
+      if(!res.ok)throw new Error('Setup failed');
+      setup.style.display='none';interview.style.display='block';sessionStarted=new Date();resetThread();
+      $('sessionMeta').textContent='Active now';$('contextSummary').textContent='Context loaded · Ready for question 1';
+      $('resumeValue').textContent=resume?`${resume.length.toLocaleString()} characters loaded`:'Not provided';$('jdValue').textContent=jd?`${jd.length.toLocaleString()} characters loaded`:'Not provided';
+      $('roleValue').textContent=(jd.match(/(?:role|position|title)\s*[:\-]?\s*([^\n]+)/i)||[])[1]?.trim()||'Backend / Software Engineering';
+      setStatus('Ready for your first question.');
+    }catch(e){$('setupBtn').disabled=false;$('setupBtn').textContent='Start practice session →';alert('Could not start the session. Please try again.');}
+  }
+  async function changeContext(){try{await fetch('/api/stt/reset-history',{method:'POST'});}catch(e){} setup.style.display='block';interview.style.display='none';$('setupBtn').disabled=false;$('setupBtn').textContent='Start practice session →';setStatus('Ready');}
 
-    stopBtn.onclick = () => {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
-      stopBtn.disabled = true;
-      stopBtn.classList.remove('recording');
-      setStatus('Transcribing...', 'active');
-    };
+  $('setupBtn').onclick=startSession;$('changeContextBtn').onclick=changeContext;$('newSessionTop').onclick=changeContext;
+  $('startBtn').onclick=async()=>{
+    try{
+      chunks=[];const stream=await navigator.mediaDevices.getUserMedia({audio:true});mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};mediaRecorder.onstop=sendAudio;mediaRecorder.start();
+      $('startBtn').disabled=true;$('startBtn').classList.add('recording');$('startBtn').textContent='● Recording...';$('stopBtn').disabled=false;setStatus('Recording your question...','active');
+    }catch(e){setStatus('Microphone access was denied. Check browser permissions.','error');}
+  };
+  $('stopBtn').onclick=()=>{if(!mediaRecorder)return;mediaRecorder.stop();mediaRecorder.stream.getTracks().forEach(t=>t.stop());$('stopBtn').disabled=true;$('startBtn').classList.remove('recording');$('startBtn').textContent='🎙 Start recording';setStatus('Transcribing your question...','active');};
 
-    async function sendAudio() {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      const form = new FormData();
-      form.append('audio', blob, 'recording.webm');
-
-      // placeholder turn while waiting
-      const placeholder = addTurn('…', '', true);
-
-      try {
-        const res = await fetch('/api/stt/ask', { method: 'POST', body: form });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        const question = data.transcript || '(empty)';
-        const answerHtml = marked.parse(data.answer || '(no answer)');
-
-        // update placeholder with real content
-        placeholder.closest('.turn').querySelector('.turn-question').innerHTML =
-          `<span>Q</span>${escapeHtml(question)}`;
-        placeholder.classList.remove('thinking');
-        placeholder.innerHTML = answerHtml;
-        hljs.highlightAll();
-
-        setStatus('Done — record again to continue', 'done');
-        startBtn.disabled = false;
-      } catch (err) {
-        placeholder.classList.remove('thinking');
-        placeholder.innerHTML = `<span style="color:#7a3a3a">Error: ${err.message}</span>`;
-        setStatus('Error — try again', 'error');
-        startBtn.disabled = false;
-      }
-    }
-  </script>
+  async function sendAudio(){
+    const blob=new Blob(chunks,{type:'audio/webm'}),form=new FormData();form.append('audio',blob,'recording.webm');
+    questionNumber++;updateStats();const turn=addTurn('Transcribing...','',true);
+    try{
+      const res=await fetch('/api/stt/ask',{method:'POST',body:form});if(!res.ok)throw new Error(`Request failed (${res.status})`);const data=await res.json();
+      const q=data.transcript||'(No speech detected)';turn.querySelector('.turn-question').textContent=q;turn.querySelector('.turn-head .qnum').textContent='#'+questionNumber;
+      const body=turn.querySelector('.md-body');body.classList.remove('thinking');body.innerHTML=marked.parse(data.answer||'(No answer returned)');turn.querySelector('.turn-head span').textContent='Interview question';hljs.highlightAll();
+      $('contextSummary').textContent=`Context loaded · Ready for question ${questionNumber+1}`;setStatus('Answer ready — continue when you are ready.','done');$('startBtn').disabled=false;
+    }catch(e){const body=turn.querySelector('.md-body');body.classList.remove('thinking');body.innerHTML=`<span style="color:#ef6b73">Unable to generate an answer: ${escapeHtml(e.message)}</span>`;setStatus('Something went wrong. Try the question again.','error');$('startBtn').disabled=false;}
+  }
+</script>
 </body>
 </html>
