@@ -47,7 +47,10 @@ public class GroqSpeechService {
 
         MultipartBodyBuilder body = new MultipartBodyBuilder();
         body.part("file", new ByteArrayResource(audioBytes) {
-            @Override public String getFilename() { return "live.webm"; }
+            @Override
+            public String getFilename() {
+                return "live.webm";
+            }
         }).contentType(MediaType.parseMediaType("audio/webm"));
         body.part("model", sttModel);
         body.part("language", "en");
@@ -64,12 +67,18 @@ public class GroqSpeechService {
                     .bodyToMono(Map.class)
                     .block();
 
-            String transcript = response != null ? String.valueOf(response.getOrDefault("text", "")) : "";
+            // Do not use Map<?, ?>.getOrDefault(key, String) because the wildcard
+            // value type prevents javac from accepting the String default value.
+            Object textValue = response == null ? null : response.get("text");
+            String transcript = textValue == null ? "" : textValue.toString();
+
             log.info("Groq STT transcript: {}", transcript);
             return transcript.trim();
         } catch (WebClientResponseException e) {
             log.error("Groq STT failed: HTTP {} {}. Response body: {}",
-                    e.getStatusCode().value(), e.getStatusText(), e.getResponseBodyAsString());
+                    e.getStatusCode().value(),
+                    e.getStatusText(),
+                    e.getResponseBodyAsString());
             throw e;
         }
     }
@@ -80,6 +89,7 @@ public class GroqSpeechService {
         String answer = transcript.isBlank()
                 ? "Could not transcribe audio. Please try speaking more clearly."
                 : groqLLMService.answerQuestion(transcript, jobDescription, resume, history);
+
         return TranscribeResponse.builder()
                 .transcript(transcript.isBlank() ? "(empty transcript)" : transcript)
                 .answer(answer)
