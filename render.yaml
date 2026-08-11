@@ -3,7 +3,7 @@ services:
     name: market-compass-llm
     runtime: docker
     dockerfilePath: ./market-compass-llm/Dockerfile
-    dockerContext: ./market-compass-llm
+    dockerContext: .
     plan: free
     envVars:
       - key: GROQ_API_KEY
