@@ -5,7 +5,8 @@ spring:
 
 groq:
   api-key: ${GROQ_API_KEY}
-  llm-model: ${GROQ_LLM_MODEL:llama-3.3-70b-versatile}
+  # 8B is much better suited to the Groq free-tier TPM limit for live interview use.
+  llm-model: ${GROQ_LLM_MODEL:llama-3.1-8b-instant}
   stt-model: ${GROQ_STT_MODEL:whisper-large-v3-turbo}
 
 logging:
