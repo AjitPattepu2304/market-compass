@@ -2,14 +2,12 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-COPY market-compass-core/pom.xml market-compass-core/pom.xml
-COPY market-compass-llm/pom.xml market-compass-llm/pom.xml
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress -pl market-compass-core -am
+COPY market-compass/.mvn/ .mvn/
+COPY market-compass/mvnw market-compass/pom.xml ./
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress
 
-COPY src/ src/
-RUN ./mvnw package -DskipTests -q --no-transfer-progress -pl market-compass-core
+COPY market-compass/src/ src/
+RUN ./mvnw package -DskipTests -q --no-transfer-progress
 
 # ── Stage 2: Run ──────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
