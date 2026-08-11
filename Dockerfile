@@ -5,8 +5,6 @@ WORKDIR /app
 # Copy Maven wrapper + project descriptor first (layer-cache friendly)
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-COPY market-compass-core/pom.xml market-compass-core/pom.xml
-COPY market-compass-llm/pom.xml market-compass-llm/pom.xml
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress
 
 # Copy source and build the fat jar
