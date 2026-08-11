@@ -36,18 +36,11 @@
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
-		<!-- Spring AI Core - explicit version from Maven Central -->
+		<!-- Spring AI Ollama starter - includes core -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-core</artifactId>
-			<version>0.8.1</version>
-		</dependency>
-
-		<!-- Spring AI Ollama - explicit version from Maven Central -->
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-ollama</artifactId>
-			<version>0.8.1</version>
+			<artifactId>spring-ai-starter-model-ollama</artifactId>
+			<version>1.0.0</version>
 		</dependency>
 
 		<!-- HTTP client for Ollama API calls -->

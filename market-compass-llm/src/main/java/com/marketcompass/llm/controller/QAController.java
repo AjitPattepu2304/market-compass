@@ -1,77 +1,56 @@
 package com.marketcompass.llm.controller;
 
-import com.marketcompass.llm.dto.QuestionRequest;
 import com.marketcompass.llm.dto.AnswerResponse;
+import com.marketcompass.llm.dto.QuestionRequest;
+import com.marketcompass.llm.groq.GroqLLMService;
 import com.marketcompass.llm.service.LLMService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * REST API for LLM-powered Q&A
- * 
- * Endpoints:
- * - POST /api/llm/qa - Ask a question
- * - POST /api/llm/qa/contextual - Ask with portfolio context
- */
 @RestController
 @RequestMapping("/api/llm")
-@RequiredArgsConstructor
 @Slf4j
 public class QAController {
 
-    private final LLMService llmService;
+    @Autowired(required = false) private LLMService llmService;
+    @Autowired(required = false) private GroqLLMService groqLLMService;
 
-    /**
-     * Ask a question about investments
-     * 
-     * @param request Question request
-     * @return Answer from LLM
-     */
     @PostMapping("/qa")
     public ResponseEntity<AnswerResponse> askQuestion(@RequestBody QuestionRequest request) {
         log.info("Received question: {}", request.getQuestion());
-        
-        String answer = llmService.answerQuestion(request.getQuestion());
-        
-        AnswerResponse response = AnswerResponse.builder()
+        String answer = answer(request.getQuestion(), null, null);
+        return ResponseEntity.ok(AnswerResponse.builder()
                 .question(request.getQuestion())
                 .answer(answer)
-                .model("ollama/llama2")
-                .build();
-        
-        return ResponseEntity.ok(response);
+                .model(modelName())
+                .build());
     }
 
-    /**
-     * Ask a question with additional context
-     * 
-     * @param request Question with context
-     * @return Answer from LLM
-     */
     @PostMapping("/qa/contextual")
     public ResponseEntity<AnswerResponse> askQuestionWithContext(@RequestBody QuestionRequest request) {
         log.info("Received contextual question: {}", request.getQuestion());
-        
-        String answer = llmService.answerQuestion(request.getQuestion(), request.getContext());
-        
-        AnswerResponse response = AnswerResponse.builder()
+        String answer = answer(request.getQuestion(), null, request.getContext());
+        return ResponseEntity.ok(AnswerResponse.builder()
                 .question(request.getQuestion())
                 .answer(answer)
                 .context(request.getContext())
-                .model("ollama/llama2")
-                .build();
-        
-        return ResponseEntity.ok(response);
+                .model(modelName())
+                .build());
     }
 
-    /**
-     * Health check endpoint
-     */
     @GetMapping("/health")
     public ResponseEntity<String> health() {
-        return ResponseEntity.ok("LLM service is running");
+        return ResponseEntity.ok("LLM service is running — mode: " + modelName());
     }
 
+    private String answer(String question, String jd, String context) {
+        if (groqLLMService != null) return groqLLMService.answerQuestion(question, jd, context);
+        return llmService.answerQuestion(question, jd, context);
+    }
+
+    private String modelName() {
+        return groqLLMService != null ? "groq/llama-3.3-70b-versatile" : "ollama/llama3.2:3b";
+    }
 }

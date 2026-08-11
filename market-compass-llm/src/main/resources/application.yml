@@ -3,18 +3,25 @@ spring:
     name: market-compass-llm
   ai:
     ollama:
-      # Configure Ollama connection
-      # Make sure Ollama is running on your machine
-      base-url: http://localhost:11434
-      model: llama2
-      # Optional: embedding model for semantic search
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama3.2:3b}
       embedding:
         model: nomic-embed-text
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
 
 server:
-  port: 8081
+  port: ${PORT:8081}
   servlet:
     context-path: /
+
+whisper:
+  binary: ${WHISPER_BINARY:/opt/homebrew/bin/whisper-cli}
+  model: ${WHISPER_MODEL:/opt/homebrew/share/whisper-cpp/ggml-base.en.bin}
 
 logging:
   level:

@@ -1,0 +1,13 @@
+spring:
+  ai:
+    autoconfigure:
+      exclude: org.springframework.ai.autoconfigure.ollama.OllamaAutoConfiguration
+
+groq:
+  api-key: ${GROQ_API_KEY}
+  llm-model: ${GROQ_LLM_MODEL:llama-3.3-70b-versatile}
+  stt-model: ${GROQ_STT_MODEL:whisper-large-v3-turbo}
+
+logging:
+  level:
+    com.marketcompass: INFO
