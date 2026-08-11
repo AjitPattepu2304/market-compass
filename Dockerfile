@@ -2,20 +2,20 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Copy Maven wrapper + project descriptor first (layer-cache friendly)
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress
+# copy child module poms so parent resolves without errors
+COPY market-compass-core/pom.xml market-compass-core/pom.xml
+COPY market-compass-llm/pom.xml market-compass-llm/pom.xml
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress --projects . --also-make
 
-# Copy source and build the fat jar
 COPY src/ src/
-RUN ./mvnw clean package -DskipTests -q --no-transfer-progress
+RUN ./mvnw clean package -DskipTests -q --no-transfer-progress --projects .
 
 # ── Stage 2: Run ──────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
@@ -23,9 +23,6 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
-# Container-aware JVM flags:
-#   UseContainerSupport  — respect cgroup memory limits (on by default in 21, explicit is safe)
-#   MaxRAMPercentage     — use up to 75% of container RAM for the JVM heap
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \
