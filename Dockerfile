@@ -6,10 +6,10 @@ COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 COPY market-compass-core/pom.xml market-compass-core/pom.xml
 COPY market-compass-llm/pom.xml market-compass-llm/pom.xml
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -q --no-transfer-progress
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -pl market-compass-core -q --no-transfer-progress
 
-COPY src/ src/
-RUN ./mvnw clean package -DskipTests -q --no-transfer-progress
+COPY market-compass-core/src/ market-compass-core/src/
+RUN ./mvnw clean package -pl market-compass-core -DskipTests -q --no-transfer-progress
 
 # ── Stage 2: Run ──────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
@@ -18,7 +18,7 @@ WORKDIR /app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/market-compass-core/target/*.jar app.jar
 
 EXPOSE 8080
 
