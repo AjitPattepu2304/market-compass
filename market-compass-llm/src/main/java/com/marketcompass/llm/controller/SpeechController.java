@@ -35,22 +35,29 @@ public class SpeechController {
 
     @PostMapping("/transcribe")
     public ResponseEntity<TranscribeResponse> transcribe(@RequestParam("audio") MultipartFile audio) throws Exception {
-        String transcript = groqSpeechService != null ? groqSpeechService.transcribe(audio) : localSpeechService.transcribe(audio);
+        String transcript = groqSpeechService != null
+                ? groqSpeechService.transcribe(audio)
+                : localSpeechService.transcribe(audio);
         return ResponseEntity.ok(TranscribeResponse.builder().transcript(transcript).build());
     }
 
     @PostMapping("/answer-live")
     public ResponseEntity<TranscribeResponse> answerLive(@RequestBody Map<String, Object> request, HttpSession session) {
         if (!Boolean.TRUE.equals(session.getAttribute("sessionActive"))) {
-            return ResponseEntity.badRequest().body(TranscribeResponse.builder().answer("The interview session has ended. Start a new session to continue.").build());
+            return ResponseEntity.badRequest().body(TranscribeResponse.builder()
+                    .answer("The interview session has ended. Start a new session to continue.").build());
         }
+
         String conversation = String.valueOf(request.getOrDefault("conversation", "")).trim();
         if (conversation.isBlank()) {
-            return ResponseEntity.badRequest().body(TranscribeResponse.builder().answer("I could not hear a question yet. Keep listening and try Answer Now again.").build());
+            return ResponseEntity.badRequest().body(TranscribeResponse.builder()
+                    .answer("I could not hear a question yet. Keep listening and try Answer Now again.").build());
         }
+
         String jd = (String) session.getAttribute("jobDescription");
         String resume = (String) session.getAttribute("resume");
-        @SuppressWarnings("unchecked") List<Map<String, String>> history = (List<Map<String, String>>) session.getAttribute("history");
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> history = (List<Map<String, String>>) session.getAttribute("history");
         if (history == null) history = new ArrayList<>();
 
         String answer;
@@ -65,29 +72,78 @@ public class SpeechController {
 
         history.add(Map.of("role", "user", "content", "Live interview:\n" + conversation));
         history.add(Map.of("role", "assistant", "content", answer));
-        if (history.size() > 8) history = new ArrayList<>(history.subList(history.size() - 8, history.size()));
+        if (history.size() > 8) {
+            history = new ArrayList<>(history.subList(history.size() - 8, history.size()));
+        }
         session.setAttribute("history", history);
 
-        return ResponseEntity.ok(TranscribeResponse.builder().transcript(conversation).answer(answer)
-                .model(liveInterviewService != null ? "groq/live-interview" : "ollama/live-interview").build());
+        return ResponseEntity.ok(TranscribeResponse.builder()
+                .transcript(conversation)
+                .answer(answer)
+                .model(liveInterviewService != null ? "groq/live-interview" : "ollama/live-interview")
+                .build());
     }
 
     @PostMapping("/ask")
-    public ResponseEntity<TranscribeResponse> transcribeAndAsk(@RequestParam("audio") MultipartFile audio, HttpSession session) throws Exception {
+    public ResponseEntity<TranscribeResponse> transcribeAndAsk(
+            @RequestParam("audio") MultipartFile audio,
+            HttpSession session) throws Exception {
+
         if (!Boolean.TRUE.equals(session.getAttribute("sessionActive"))) {
-            return ResponseEntity.badRequest().body(TranscribeResponse.builder().answer("The interview session has ended.").build());
+            return ResponseEntity.badRequest().body(TranscribeResponse.builder()
+                    .answer("The interview session has ended.").build());
         }
+
         String jd = (String) session.getAttribute("jobDescription");
         String resume = (String) session.getAttribute("resume");
-        @SuppressWarnings("unchecked") List<Map<String, String>> history = (List<Map<String, String>>) session.getAttribute("history");
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> history = (List<Map<String, String>>) session.getAttribute("history");
         if (history == null) history = new ArrayList<>();
-        TranscribeResponse response = groqSpeechService != null
-                ? groqSpeechService.transcribeAndAsk(audio, jd, resume, history)
-                : localSpeechService.transcribeAndAsk(audio, jd, resume, history);
-        history.add(Map.of("role", "user", "content", response.getTranscript()));
-        history.add(Map.of("role", "assistant", "content", response.getAnswer()));
+
+        String transcript;
+        String answer;
+        String model;
+
+        if (groqSpeechService != null) {
+            // First create a complete transcript from the finalized audio file.
+            transcript = groqSpeechService.transcribe(audio);
+
+            if (transcript.isBlank()) {
+                return ResponseEntity.badRequest().body(TranscribeResponse.builder()
+                        .transcript("")
+                        .answer("I could not hear a complete question. Please try Answer Now again.")
+                        .model("groq/" + "stt")
+                        .build());
+            }
+
+            // Use the dedicated live-interview prompt so the model identifies the
+            // latest interviewer question and ignores candidate speech/noise.
+            if (liveInterviewService != null) {
+                answer = liveInterviewService.answer(transcript, jd, resume, history);
+                model = "groq/live-interview";
+            } else {
+                answer = groqSpeechService.transcribeAndAsk(audio, jd, resume, history).getAnswer();
+                model = "groq/" + "stt-llm";
+            }
+        } else {
+            TranscribeResponse response = localSpeechService.transcribeAndAsk(audio, jd, resume, history);
+            transcript = response.getTranscript();
+            answer = response.getAnswer();
+            model = response.getModel();
+        }
+
+        history.add(Map.of("role", "user", "content", "Live interview:\n" + transcript));
+        history.add(Map.of("role", "assistant", "content", answer));
+        if (history.size() > 8) {
+            history = new ArrayList<>(history.subList(history.size() - 8, history.size()));
+        }
         session.setAttribute("history", history);
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.ok(TranscribeResponse.builder()
+                .transcript(transcript)
+                .answer(answer)
+                .model(model)
+                .build());
     }
 
     @PostMapping("/end-session")
