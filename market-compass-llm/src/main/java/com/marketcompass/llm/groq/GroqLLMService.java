@@ -17,12 +17,12 @@ import java.util.Map;
 @Slf4j
 public class GroqLLMService {
 
-    // Keep the prompt small enough for the free-tier TPM limit.
-    private static final int MAX_RESUME_CHARS = 7000;
-    private static final int MAX_JD_CHARS = 5000;
+    private static final int MAX_RESUME_CHARS = 2200;
+    private static final int MAX_JD_CHARS = 1800;
     private static final int MAX_HISTORY_MESSAGES = 2;
-    private static final int MAX_HISTORY_CHARS = 1200;
-    private static final int MAX_COMPLETION_TOKENS = 650;
+    private static final int MAX_HISTORY_CHARS = 600;
+    private static final int MAX_QUESTION_CHARS = 1800;
+    private static final int MAX_COMPLETION_TOKENS = 350;
     private static final int MAX_RETRIES = 1;
 
     @Value("${groq.api-key}")
@@ -41,18 +41,24 @@ public class GroqLLMService {
 
     public String answerQuestion(String question, String jobDescription, String resume,
                                  List<Map<String, String>> history) {
+        long start = System.nanoTime();
         log.info("Groq LLM question: {}", question);
 
-        String systemPrompt = buildSystemPrompt(jobDescription, resume);
+        boolean personalContextNeeded = needsPersonalContext(question);
+        String systemPrompt = buildSystemPrompt(
+                personalContextNeeded ? jobDescription : null,
+                personalContextNeeded ? resume : null
+        );
+
         List<Map<String, String>> messages = new ArrayList<>();
         messages.add(Map.of("role", "system", "content", systemPrompt));
         messages.addAll(trimHistory(history));
-        messages.add(Map.of("role", "user", "content", safeText(question, 2500)));
+        messages.add(Map.of("role", "user", "content", safeText(question, MAX_QUESTION_CHARS)));
 
         Map<String, Object> body = Map.of(
                 "model", model,
                 "messages", messages,
-                "temperature", 0.2,
+                "temperature", 0.1,
                 "max_completion_tokens", MAX_COMPLETION_TOKENS
         );
 
@@ -67,7 +73,9 @@ public class GroqLLMService {
                         .body(Map.class);
 
                 String answer = extractAnswer(response);
-                log.info("Groq LLM answered successfully using {}", model);
+                long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+                log.info("Groq LLM answered in {} ms using {} (personalContext={})",
+                        elapsedMs, model, personalContextNeeded);
                 return answer;
 
             } catch (RestClientResponseException e) {
@@ -79,7 +87,6 @@ public class GroqLLMService {
                 }
 
                 if (e.getStatusCode().value() == 429) {
-                    log.warn("Groq rate limit still active after retry: {}", e.getResponseBodyAsString());
                     return "Groq is temporarily rate-limited. Please wait a few seconds and try again.";
                 }
 
@@ -102,11 +109,9 @@ public class GroqLLMService {
             if (choices == null || choices.isEmpty()) {
                 return "Unable to generate an answer right now. Please try the question again.";
             }
-
             Map<?, ?> choice = (Map<?, ?>) choices.get(0);
             Map<?, ?> message = (Map<?, ?>) choice.get("message");
             String answer = (String) message.get("content");
-
             return answer == null || answer.isBlank()
                     ? "Unable to generate an answer right now. Please try the question again."
                     : answer.trim();
@@ -117,71 +122,69 @@ public class GroqLLMService {
     }
 
     private List<Map<String, String>> trimHistory(List<Map<String, String>> history) {
-        if (history == null || history.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+        if (history == null || history.isEmpty()) return Collections.emptyList();
         int fromIndex = Math.max(0, history.size() - MAX_HISTORY_MESSAGES);
         List<Map<String, String>> recent = new ArrayList<>();
-
         for (int i = fromIndex; i < history.size(); i++) {
             Map<String, String> message = history.get(i);
             if (message == null) continue;
-
             String role = message.getOrDefault("role", "user");
             String content = safeText(message.get("content"), MAX_HISTORY_CHARS);
-            if (!content.isBlank()) {
-                recent.add(Map.of("role", role, "content", content));
-            }
+            if (!content.isBlank()) recent.add(Map.of("role", role, "content", content));
         }
-
         return recent;
+    }
+
+    private boolean needsPersonalContext(String question) {
+        if (question == null || question.isBlank()) return false;
+        String q = question.toLowerCase();
+        String[] terms = {
+                "tell me about yourself", "yourself", "your experience", "your resume",
+                "your background", "your project", "your role", "your current role",
+                "your work", "your skills", "your strengths", "your weakness",
+                "why should we hire", "why do you want", "why this company", "why this role",
+                "behavioral", "leadership", "conflict", "challenge", "difficult situation",
+                "teamwork", "stakeholder", "manager", "ownership", "failure", "achievement",
+                "accomplishment", "career", "walmart", "job description", " jd", "resume"
+        };
+        for (String term : terms) if (q.contains(term)) return true;
+        return false;
     }
 
     private String buildSystemPrompt(String jobDescription, String resume) {
         StringBuilder prompt = new StringBuilder("""
-                You are an expert interview coach helping a candidate answer live interview questions.
-
-                Rules:
-                - Answer the current interviewer question directly and correctly.
-                - Make the answer sound natural when spoken by a candidate.
-                - For technical questions, explain the key idea first and give a short code example only when useful.
-                - For behavioral questions, use a concise STAR-style answer.
-                - Do not give long tutorials unless the interviewer explicitly asks for detail.
-                - Keep the answer concise: normally 2-5 short paragraphs or bullets.
-                - Do not mention that you are an AI.
-                - Never repeat the resume or job description unnecessarily.
+                You are an expert interview coach helping a candidate answer interview questions.
+                Answer the current question directly and correctly.
+                Make the answer natural to speak in an interview.
+                For technical questions, give the key idea first and a short code example only when useful.
+                For behavioral questions, use concise STAR structure.
+                Keep answers short: normally 2-4 short paragraphs or bullets.
+                Do not give a long tutorial unless explicitly asked.
+                Do not mention that you are an AI.
                 """);
 
         if (jobDescription != null && !jobDescription.isBlank()) {
             prompt.append("\nJOB DESCRIPTION (use only when relevant):\n")
                     .append(safeText(jobDescription, MAX_JD_CHARS));
         }
-
         if (resume != null && !resume.isBlank()) {
             prompt.append("\n\nCANDIDATE RESUME (use only when relevant):\n")
                     .append(safeText(resume, MAX_RESUME_CHARS));
         }
-
         return prompt.toString();
     }
 
     private String safeText(String value, int maxChars) {
         if (value == null || value.isBlank()) return "";
         String trimmed = value.trim();
-        if (trimmed.length() <= maxChars) return trimmed;
-        return trimmed.substring(0, maxChars) + "\n[context truncated]";
+        return trimmed.length() <= maxChars ? trimmed : trimmed.substring(0, maxChars) + "\n[context truncated]";
     }
 
     private long parseRetryAfter(RestClientResponseException e) {
         try {
             String header = e.getResponseHeaders().getFirst("retry-after");
-            if (header != null) {
-                return Math.max(1, Math.min(10, Long.parseLong(header.trim())));
-            }
-        } catch (Exception ignored) {
-            // Fall through to the default wait.
-        }
+            if (header != null) return Math.max(1, Math.min(10, Long.parseLong(header.trim())));
+        } catch (Exception ignored) { }
         return 3;
     }
 
