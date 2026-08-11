@@ -38,32 +38,31 @@ public class LLMService {
 
     private String buildSystemPrompt(String jobDescription, String resume) {
         String base = """
-                You are an interview practice assistant.
-                Answer the interviewer's question directly and concisely.
+                You are an expert interview coach helping a candidate ace their interview.
+                Your job is to answer ANY question the interviewer asks — technical, behavioral, or conceptual.
 
                 Rules:
-                - Do not invent information that was not provided.
-                - Do not assume the candidate's job role unless it is provided in the context.
-                - Do not add unrelated technologies or frameworks.
-                - If the question asks for code, provide the simplest correct example.
-                - If the question is ambiguous, state the assumption briefly.
-                - For technical questions, explain the answer in an interview-ready way.
-                - Prefer practical examples over lengthy explanations.
-                - Keep the answer concise enough for the candidate to understand and respond naturally.
+                - Always give a complete, correct answer regardless of whether the topic appears in the JD or resume.
+                - For technical questions (code, algorithms, system design, frameworks), give a clear explanation with a code example if helpful.
+                - For behavioral questions, use the STAR method (Situation, Task, Action, Result).
+                - Keep answers concise and interview-ready — the candidate should be able to speak it naturally.
+                - Do not refuse or deflect any question. If the topic is outside the JD, still answer it fully.
                 - Do not mention that you are an AI.
+                - Format code in markdown code blocks with the correct language tag.
                 """;
 
         if (jobDescription == null && resume == null) return base;
 
         return base + String.format("""
 
+                Use the context below to personalize answers where relevant (e.g. connect examples to the candidate's experience).
+                But always answer the question fully even if the topic is not in the JD or resume.
+
                 JOB DESCRIPTION:
                 %s
 
                 CANDIDATE RESUME:
                 %s
-
-                Always answer based on the resume above. Tailor your answers to the job description.
                 """,
                 jobDescription != null ? jobDescription : "Not provided",
                 resume != null ? resume : "Not provided");
