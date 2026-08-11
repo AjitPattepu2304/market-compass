@@ -1,11 +1,16 @@
 services:
   - type: web
-    name: market-compass
+    name: market-compass-llm
     runtime: docker
+    dockerfilePath: ./market-compass-llm/Dockerfile
+    dockerContext: ./market-compass-llm
     plan: free
-    branch: main
-    dockerfilePath: ./Dockerfile
     envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_LLM_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_STT_MODEL
+        value: whisper-large-v3-turbo
       - key: PORT
-        value: 8080
-    healthCheckPath: /api/market/status
+        value: 8081

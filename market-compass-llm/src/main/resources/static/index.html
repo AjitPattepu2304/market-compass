@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview Assistant</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0d0d0d;
+      color: #c9c9c9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px 60px;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 40px; }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #e0e0e0;
+      letter-spacing: -0.3px;
+    }
+    .header p {
+      font-size: 13px;
+      color: #4a4a4a;
+      margin-top: 6px;
+    }
+    .dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #2a6b4a;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    /* ── Cards ── */
+    .card {
+      width: 100%;
+      max-width: 680px;
+      background: #141414;
+      border: 1px solid #1f1f1f;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 14px;
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: #3a3a3a;
+      margin-bottom: 12px;
+    }
+    textarea {
+      width: 100%;
+      background: #0d0d0d;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      color: #b0b0b0;
+      font-size: 13.5px;
+      line-height: 1.7;
+      padding: 12px 14px;
+      resize: vertical;
+      min-height: 110px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { outline: none; border-color: #2a4a3a; }
+    textarea::placeholder { color: #2e2e2e; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width: 100%;
+      max-width: 680px;
+      padding: 13px;
+      background: #1a3a2a;
+      color: #5aad7a;
+      border: 1px solid #1f4a34;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+    .btn-primary:hover { background: #1f4a34; color: #6abf8a; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 14px;
+    }
+    .btn-record {
+      flex: 1;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    .btn-record:disabled { opacity: 0.25; cursor: not-allowed; }
+    #startBtn { background: #1a3a2a; color: #5aad7a; border: 1px solid #1f4a34; }
+    #startBtn:not(:disabled):hover { background: #1f4a34; }
+    #stopBtn  { background: #3a1a1a; color: #ad5a5a; border: 1px solid #4a1f1f; }
+    #stopBtn:not(:disabled):hover  { background: #4a1f1f; }
+
+    .btn-reset {
+      background: none;
+      border: 1px solid #1e1e1e;
+      color: #3a3a3a;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.2s, border-color 0.2s;
+      margin-top: 4px;
+    }
+    .btn-reset:hover { color: #666; border-color: #333; }
+
+    /* ── Status ── */
+    .status {
+      font-size: 12px;
+      color: #3a3a3a;
+      height: 16px;
+      margin-bottom: 14px;
+      width: 100%;
+      max-width: 680px;
+    }
+    .status.active { color: #4a7a5a; }
+    .status.done   { color: #3a6a4a; }
+    .status.error  { color: #7a3a3a; }
+
+    /* ── Answer / Transcript boxes ── */
+    .card-body {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #888;
+      white-space: pre-wrap;
+      min-height: 56px;
+    }
+    .card-body.has-content { color: #b8b8b8; }
+
+    /* ── Recording pulse ── */
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(90, 173, 122, 0.15); }
+      70%  { box-shadow: 0 0 0 10px rgba(90, 173, 122, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(90, 173, 122, 0); }
+    }
+    .recording { animation: pulse-ring 1.4s infinite; }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      background: #1a3a2a;
+      color: #3a7a5a;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%;
+      max-width: 680px;
+      border: none;
+      border-top: 1px solid #181818;
+      margin: 6px 0 20px;
+    }
+
+    #interview {
+      display: none;
+      width: 100%;
+      max-width: 680px;
+      flex-direction: column;
+      align-items: center;
+    }
+    #setup { width: 100%; max-width: 680px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1><span class="dot"></span>Interview Assistant</h1>
+    <p>Speak naturally — get answers tailored to your resume</p>
+  </div>
+
+  <!-- ── Setup ── -->
+  <div id="setup">
+    <div class="card">
+      <div class="card-label">Job Description</div>
+      <textarea id="jdInput" placeholder="Paste the job description..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-label">Your Resume</div>
+      <textarea id="resumeInput" placeholder="Paste your resume..."></textarea>
+    </div>
+    <button class="btn-primary" id="setupBtn">Begin Session →</button>
+  </div>
+
+  <!-- ── Interview ── -->
+  <div id="interview">
+    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <span style="font-size:12px;color:#3a3a3a;">Session active <span class="badge">context loaded</span></span>
+      <button class="btn-reset" id="resetBtn">↩ Change context</button>
+    </div>
+
+    <div class="controls">
+      <button class="btn-record" id="startBtn">▶ &nbsp;Record</button>
+      <button class="btn-record" id="stopBtn" disabled>⏹ &nbsp;Stop &amp; Answer</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="card">
+      <div class="card-label">Question heard</div>
+      <div class="card-body" id="transcript">Waiting for your question...</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Suggested answer</div>
+      <div class="card-body" id="answer">Answer will appear here after recording...</div>
+    </div>
+  </div>
+
+  <script>
+    let mediaRecorder, chunks = [];
+
+    const setupDiv    = document.getElementById('setup');
+    const interviewDiv = document.getElementById('interview');
+    const setupBtn    = document.getElementById('setupBtn');
+    const startBtn    = document.getElementById('startBtn');
+    const stopBtn     = document.getElementById('stopBtn');
+    const resetBtn    = document.getElementById('resetBtn');
+    const statusEl    = document.getElementById('status');
+    const transcriptEl = document.getElementById('transcript');
+    const answerEl    = document.getElementById('answer');
+
+    function setStatus(msg, type = '') {
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + type;
+    }
+
+    setupBtn.onclick = async () => {
+      const jd     = document.getElementById('jdInput').value.trim();
+      const resume = document.getElementById('resumeInput').value.trim();
+      if (!jd && !resume) { alert('Paste at least a job description or resume.'); return; }
+      setupBtn.disabled = true;
+      setupBtn.textContent = 'Setting up...';
+      const res = await fetch('/api/stt/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobDescription: jd, resume })
+      });
+      if (res.ok) {
+        setupDiv.style.display = 'none';
+        interviewDiv.style.display = 'flex';
+      } else {
+        setupBtn.disabled = false;
+        setupBtn.textContent = 'Begin Session →';
+        alert('Setup failed. Try again.');
+      }
+    };
+
+    resetBtn.onclick = () => {
+      interviewDiv.style.display = 'none';
+      setupDiv.style.display = 'block';
+      setupBtn.disabled = false;
+      setupBtn.textContent = 'Begin Session →';
+    };
+
+    startBtn.onclick = async () => {
+      try {
+        chunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = sendAudio;
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        stopBtn.classList.add('recording');
+        setStatus('● Recording...', 'active');
+        transcriptEl.textContent = '...';
+        transcriptEl.className = 'card-body';
+        answerEl.textContent = '...';
+        answerEl.className = 'card-body';
+      } catch {
+        setStatus('Microphone access denied', 'error');
+      }
+    };
+
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      stopBtn.disabled = true;
+      stopBtn.classList.remove('recording');
+      startBtn.disabled = false;
+      setStatus('Processing...', 'active');
+    };
+
+    async function sendAudio() {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const form = new FormData();
+      form.append('audio', blob, 'recording.webm');
+      try {
+        const res = await fetch('/api/stt/ask', { method: 'POST', body: form });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        transcriptEl.textContent = data.transcript || '(empty)';
+        transcriptEl.className = 'card-body has-content';
+        answerEl.textContent = data.answer || '(no answer)';
+        answerEl.className = 'card-body has-content';
+        setStatus('Done', 'done');
+      } catch (err) {
+        setStatus('Error: ' + err.message, 'error');
+        transcriptEl.textContent = '—';
+        answerEl.textContent = '—';
+      }
+    }
+  </script>
+</body>
+</html>
