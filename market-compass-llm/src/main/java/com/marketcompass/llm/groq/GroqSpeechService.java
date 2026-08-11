@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.List;
 import java.util.Map;
@@ -35,27 +36,42 @@ public class GroqSpeechService {
             .build();
 
     public String transcribe(MultipartFile audio) throws Exception {
-        log.info("Groq STT: {} bytes", audio.getSize());
+        if (audio == null || audio.isEmpty()) {
+            log.warn("Groq STT: empty audio upload");
+            return "";
+        }
+
+        byte[] audioBytes = audio.getBytes();
+        log.info("Groq STT: {} bytes, filename={}, contentType={}, model={}",
+                audioBytes.length, audio.getOriginalFilename(), audio.getContentType(), sttModel);
 
         MultipartBodyBuilder body = new MultipartBodyBuilder();
-        body.part("file", new ByteArrayResource(audio.getBytes()) {
-            @Override public String getFilename() { return "audio.webm"; }
-        }, MediaType.parseMediaType("audio/webm"));
+        body.part("file", new ByteArrayResource(audioBytes) {
+            @Override public String getFilename() { return "live.webm"; }
+        }).contentType(MediaType.parseMediaType("audio/webm"));
         body.part("model", sttModel);
+        body.part("language", "en");
         body.part("response_format", "json");
+        body.part("temperature", "0");
 
-        Map<?, ?> response = webClient.post()
-                .uri("/openai/v1/audio/transcriptions")
-                .header("Authorization", "Bearer " + apiKey)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(body.build()))
-                .retrieve()
-                .bodyToMono(Map.class)
-                .block();
+        try {
+            Map<?, ?> response = webClient.post()
+                    .uri("/openai/v1/audio/transcriptions")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(body.build()))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
 
-        String transcript = response != null ? (String) response.get("text") : "";
-        log.info("Transcript: {}", transcript);
-        return transcript != null ? transcript.trim() : "";
+            String transcript = response != null ? String.valueOf(response.getOrDefault("text", "")) : "";
+            log.info("Groq STT transcript: {}", transcript);
+            return transcript.trim();
+        } catch (WebClientResponseException e) {
+            log.error("Groq STT failed: HTTP {} {}. Response body: {}",
+                    e.getStatusCode().value(), e.getStatusText(), e.getResponseBodyAsString());
+            throw e;
+        }
     }
 
     public TranscribeResponse transcribeAndAsk(MultipartFile audio, String jobDescription, String resume,
