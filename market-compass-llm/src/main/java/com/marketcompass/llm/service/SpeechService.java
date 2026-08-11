@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Profile("!groq")
@@ -58,7 +60,8 @@ public class SpeechService {
         }
     }
 
-    public TranscribeResponse transcribeAndAsk(MultipartFile audio, String jobDescription, String resume) throws Exception {
+    public TranscribeResponse transcribeAndAsk(MultipartFile audio, String jobDescription, String resume,
+                                                List<Map<String, String>> history) throws Exception {
         String transcript = transcribe(audio);
         String answer = transcript.isBlank()
                 ? "Could not transcribe audio. Please try speaking more clearly."

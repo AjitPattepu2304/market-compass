@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -57,11 +58,12 @@ public class GroqSpeechService {
         return transcript != null ? transcript.trim() : "";
     }
 
-    public TranscribeResponse transcribeAndAsk(MultipartFile audio, String jobDescription, String resume) throws Exception {
+    public TranscribeResponse transcribeAndAsk(MultipartFile audio, String jobDescription, String resume,
+                                                List<Map<String, String>> history) throws Exception {
         String transcript = transcribe(audio);
         String answer = transcript.isBlank()
                 ? "Could not transcribe audio. Please try speaking more clearly."
-                : groqLLMService.answerQuestion(transcript, jobDescription, resume);
+                : groqLLMService.answerQuestion(transcript, jobDescription, resume, history);
         return TranscribeResponse.builder()
                 .transcript(transcript.isBlank() ? "(empty transcript)" : transcript)
                 .answer(answer)

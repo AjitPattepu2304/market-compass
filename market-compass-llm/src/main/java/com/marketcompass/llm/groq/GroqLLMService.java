@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -25,16 +26,22 @@ public class GroqLLMService {
             .build();
 
     public String answerQuestion(String question, String jobDescription, String resume) {
+        return answerQuestion(question, jobDescription, resume, List.of());
+    }
+
+    public String answerQuestion(String question, String jobDescription, String resume,
+                                 List<Map<String, String>> history) {
         log.info("Groq LLM question: {}", question);
 
         String systemPrompt = buildSystemPrompt(jobDescription, resume);
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+        messages.addAll(history);
+        messages.add(Map.of("role", "user", "content", question));
 
         Map<String, Object> body = Map.of(
                 "model", model,
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", "Interview question: " + question)
-                )
+                "messages", messages
         );
 
         Map<?, ?> response = restClient.post()
