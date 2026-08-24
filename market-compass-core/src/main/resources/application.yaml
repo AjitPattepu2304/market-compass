@@ -1,7 +1,13 @@
 spring:
   application:
     name: market-compass
-  # Allow both scheduled tasks to run concurrently (live-price refresh + market tick)
+  datasource:
+    url: jdbc:h2:mem:marketcompass;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
   task:
     scheduling:
       pool:
@@ -10,10 +16,12 @@ spring:
 server:
   port: 8080
 
-# ── Finnhub live price feed ────────────────────────────────────────────────────
-# Sign up free at https://finnhub.io → copy your API key.
-# Set FINNHUB_API_KEY env var (Render dashboard → Environment).
-# If unset, app falls back to hardcoded static prices — everything still works.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 finnhub:
   api:
     key: ${FINNHUB_API_KEY:}
