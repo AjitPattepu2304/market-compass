@@ -1,8 +1,8 @@
-name: Contract Job Hunter
+name: Hyderabad Full-time Job Hunter
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # every 4 hours (saves Adzuna free tier quota)
+    - cron: '0 */4 * * *'  # every 4 hours
   workflow_dispatch:        # manual trigger from GitHub Actions UI
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run job hunter
+      - name: Run Hyderabad full-time job hunter
         env:
           ADZUNA_APP_ID:  ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
@@ -34,16 +34,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f seen_jobs.json contract_jobs.csv contract_jobs.json || true
-          git diff --cached --quiet || git commit -m "chore: update job hunter state [skip ci]"
+          git add -f seen_jobs.json hyderabad_fulltime_jobs.csv hyderabad_fulltime_jobs.json job_hunter.log || true
+          git diff --cached --quiet || git commit -m "chore: update Hyderabad job hunter state [skip ci]"
           git push || true
 
       - name: Upload results as artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: contract-jobs-${{ github.run_number }}
+          name: hyderabad-fulltime-jobs-${{ github.run_number }}
           path: |
-            contract_jobs.csv
-            contract_jobs.json
+            hyderabad_fulltime_jobs.csv
+            hyderabad_fulltime_jobs.json
+            job_hunter.log
           retention-days: 30
