@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Hyderabad + Bangalore full-time Job Hunter for Ajit Pattepu.
+"""Hyderabad + Bangalore full-time Job Hunter.
 
-Search scope:
-- India only
-- Hyderabad and Bangalore only
-- Full-time / permanent only
-- Recent jobs (last 7 days)
-- Senior Java / backend / software engineering roles
+India only. Searches broadly for relevant Java/backend/software roles and
+uses the preferred company list only to prioritize results, not to restrict
+which companies can be returned.
 """
-
 import csv
 import hashlib
 import json
 import logging
 import os
 import smtplib
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -24,64 +21,72 @@ from pathlib import Path
 
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
-
 LOCATIONS = ["Hyderabad", "Bangalore"]
 MAX_JOB_AGE_DAYS = 7
 RESULTS_PER_PAGE = 50
 PAGES_PER_KEYWORD = 2
 
+# Broad discovery queries. Company names are deliberately NOT included here.
 KEYWORDS = [
     "senior java developer",
+    "senior java engineer",
     "senior software engineer java",
-    "senior java backend developer",
+    "senior software developer java",
     "senior backend engineer java",
+    "senior java backend developer",
+    "java spring boot",
     "java spring boot microservices",
-    "java backend engineer",
     "java microservices",
-    "java kafka microservices",
-    "java spring boot aws",
-    "java spring boot kubernetes",
-    "java software engineer",
-    "software engineer java spring boot",
-    "software developer java spring",
+    "java kafka",
+    "java spring kafka",
+    "java aws microservices",
+    "java kubernetes microservices",
+    "java cloud backend",
+    "java distributed systems",
+    "software engineer backend java",
     "application engineer java",
     "application developer java",
-    "java technical lead",
-    "sde 3 java backend",
-    "senior application developer java",
+    "technical lead java",
+    "sde iii java",
+    "software engineer iii java",
+    "java full stack spring boot",
 ]
 
-TARGET_COMPANIES = [
+# These companies receive a ranking boost only. Any other company can be returned.
+PREFERRED_COMPANIES = [
     "jp morgan", "jpmorgan", "j.p. morgan", "wells fargo", "goldman sachs",
     "morgan stanley", "bank of america", "state street", "vanguard", "apple",
     "microsoft", "amazon", "oracle", "salesforce", "servicenow", "adp",
     "highradius", "epam", "globallogic", "global logic", "cognizant", "ey",
     "deloitte", "accenture", "wipro", "tcs", "infosys", "hcltech", "capgemini",
-    "persistent systems", "tech mahindra", "ltimindtree", "hexaware"
+    "persistent systems", "tech mahindra", "ltimindtree", "hexaware", "paypal",
+    "uber", "expedia", "qualcomm", "amd", "broadcom", "sap", "siemens",
+    "bosch", "hsbc", "citi", "american express", "s&p global", "factset",
+    "thoughtworks", "zensar", "darwinbox", "infor", "servicenow", "walmart"
 ]
 
 EXCLUDE_TITLES = [
     "frontend", "front-end", "angular developer", "react developer", "ios",
-    "android", "qa engineer", "test engineer", "data engineer", "data scientist",
-    "ml engineer", "machine learning", "devops engineer", "ui developer", "php",
-    "ruby", ".net developer", "c# developer", "salesforce", "mainframe",
-    "sap functional", "business analyst"
+    "android", "qa engineer", "test engineer", "tester", "data engineer",
+    "data scientist", "ml engineer", "machine learning", "devops engineer",
+    "ui developer", "php", "ruby", ".net developer", "c# developer",
+    "salesforce", "mainframe", "sap functional", "business analyst"
+]
+
+NON_FULL_TIME_TERMS = [
+    "contract", "contractor", "c2c", "corp to corp", "corp-to-corp",
+    "temporary", "temp to hire", "freelance", "part time", "part-time",
+    "w2", "internship", "intern", "walk-in", "walk in"
 ]
 
 MUST_HAVE = ["java"]
-CORE_SKILLS = [
-    "spring boot", "spring", "microservice", "microservices", "backend",
-    "distributed", "rest api", "restful", "api"
-]
+CORE_SKILLS = ["spring boot", "spring", "microservice", "backend", "rest api", "restful", "distributed"]
 BONUS_SKILLS = [
     "kafka", "kubernetes", "k8s", "aws", "gcp", "cassandra", "postgresql",
     "mysql", "mongodb", "docker", "hibernate", "jpa", "oauth", "openapi",
     "ci/cd", "jenkins", "helm", "prometheus", "grafana", "react", "python"
 ]
-SENIOR_TERMS = [
-    "senior", "sr ", "sr.", "lead", "principal", "staff", "sde iii",
-    "engineer iii", "application engineer iii", "technical lead"
-]
+SENIOR_TERMS = ["senior", "sr ", "sr.", "lead", "principal", "staff", "sde iii", "engineer iii"]
 BACKEND_TITLE_TERMS = [
     "java developer", "java engineer", "software engineer", "software developer",
     "backend", "application developer", "application engineer", "sde"
@@ -92,21 +97,13 @@ OUTPUT_CSV = OUTPUT_DIR / "india_fulltime_jobs.csv"
 OUTPUT_JSON = OUTPUT_DIR / "india_fulltime_jobs.json"
 SEEN_FILE = OUTPUT_DIR / "seen_jobs.json"
 LOG_FILE = OUTPUT_DIR / "job_hunter.log"
-
 EMAIL_FROM = os.getenv("EMAIL_FROM", "")
 EMAIL_TO = os.getenv("EMAIL_TO", "")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+CSV_FIELDS = ["title", "company", "location", "salary", "type", "posted", "url", "source", "found_at", "score"]
 
-CSV_FIELDS = [
-    "title", "company", "location", "salary", "type", "posted", "url",
-    "source", "found_at", "score"
-]
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()],
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
+                    handlers=[logging.FileHandler(LOG_FILE), logging.StreamHandler()])
 log = logging.getLogger(__name__)
 
 
@@ -133,22 +130,14 @@ def search_adzuna(keyword, location, page=1):
     if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
         log.error("ADZUNA_APP_ID / ADZUNA_APP_KEY not set")
         return []
-
     params = {
-        "app_id": ADZUNA_APP_ID,
-        "app_key": ADZUNA_APP_KEY,
-        "results_per_page": RESULTS_PER_PAGE,
-        "what": keyword,
-        "where": location,
-        "sort_by": "date",
-        "content-type": "application/json",
+        "app_id": ADZUNA_APP_ID, "app_key": ADZUNA_APP_KEY,
+        "results_per_page": RESULTS_PER_PAGE, "what": keyword,
+        "where": location, "sort_by": "date", "content-type": "application/json"
     }
-    url = "https://api.adzuna.com/v1/api/jobs/in/search/{}?{}".format(
-        page, urllib.parse.urlencode(params)
-    )
-
+    url = "https://api.adzuna.com/v1/api/jobs/in/search/{}?{}".format(page, urllib.parse.urlencode(params))
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "MarketCompass-JobHunter/3.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "MarketCompass-JobHunter/4.0"})
         with urllib.request.urlopen(req, timeout=20) as response:
             data = json.loads(response.read().decode("utf-8"))
     except Exception as exc:
@@ -157,13 +146,11 @@ def search_adzuna(keyword, location, page=1):
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=MAX_JOB_AGE_DAYS)
     jobs = []
-
     for item in data.get("results", []):
         created = item.get("created", "")
         if created:
             try:
-                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                if created_dt < cutoff:
+                if datetime.fromisoformat(created.replace("Z", "+00:00")) < cutoff:
                     continue
             except ValueError:
                 pass
@@ -172,62 +159,44 @@ def search_adzuna(keyword, location, page=1):
         description = item.get("description") or ""
         company = item.get("company", {}).get("display_name", "")
         location_name = item.get("location", {}).get("display_name", "")
-        redirect_url = item.get("redirect_url", "")
+        link = item.get("redirect_url", "")
         text = f"{title} {description}".lower()
+        loc = f"{location_name} {title} {description}".lower()
 
-        # Location must actually be Hyderabad or Bangalore/Bengaluru.
-        location_text = f"{location_name} {title} {description}".lower()
         if location == "Hyderabad":
-            valid_location = any(x in location_text for x in ["hyderabad", "secunderabad", "telangana"])
+            valid_location = any(x in loc for x in ["hyderabad", "secunderabad", "telangana"])
         else:
-            valid_location = any(x in location_text for x in ["bangalore", "bengaluru", "karnataka"])
+            valid_location = any(x in loc for x in ["bangalore", "bengaluru", "karnataka"])
         if not valid_location:
             continue
 
-        # HARD full-time-only filter. Reject every explicit non-permanent signal.
+        # Hard exclusion: no contract/C2C/W2/temp/freelance/part-time/internship.
         raw_type = (item.get("contract_type") or "").lower()
-        non_full_time = [
-            "contract", "contractor", "c2c", "corp to corp", "temporary",
-            "temp to hire", "freelance", "part time", "part-time", "w2",
-            "internship", "intern", "consultant"
-        ]
-        if any(term in text or term in raw_type for term in non_full_time):
+        if any(term in text or term in raw_type for term in NON_FULL_TIME_TERMS):
             continue
-
-        # If Adzuna explicitly classifies the role, accept only permanent/full-time.
         if raw_type and raw_type not in {"permanent", "full_time", "full-time"}:
             continue
-
-        if not redirect_url:
+        if not link:
             continue
 
         salary = ""
-        salary_min = item.get("salary_min")
-        salary_max = item.get("salary_max")
-        if salary_min and salary_max:
-            salary = f"INR {int(salary_min):,}-{int(salary_max):,}"
-        elif salary_min:
-            salary = f"INR {int(salary_min):,}+"
+        smin, smax = item.get("salary_min"), item.get("salary_max")
+        if smin and smax:
+            salary = f"INR {int(smin):,}-{int(smax):,}"
+        elif smin:
+            salary = f"INR {int(smin):,}+"
 
         jobs.append({
-            "title": title,
-            "company": company,
-            "location": location_name or location,
-            "salary": salary,
-            "type": "Full-time",
-            "posted": created[:10],
-            "url": redirect_url,
-            "source": "Adzuna India",
-            "description": description,
+            "title": title, "company": company, "location": location_name or location,
+            "salary": salary, "type": "Full-time", "posted": created[:10],
+            "url": link, "source": "Adzuna India", "description": description
         })
-
     return jobs
 
 
 def relevance_score(job):
     title = job.get("title", "").lower()
     text = f"{title} {job.get('description', '')}".lower()
-
     if any(x in title for x in EXCLUDE_TITLES):
         return 0
     if not any(x in text for x in MUST_HAVE):
@@ -235,7 +204,7 @@ def relevance_score(job):
     if not any(x in title for x in BACKEND_TITLE_TERMS):
         return 0
 
-    score = 15
+    score = 20
     for skill in CORE_SKILLS:
         if skill in text:
             score += 5
@@ -254,12 +223,11 @@ def relevance_score(job):
         score += 4
     if "kubernetes" in text or "k8s" in text:
         score += 4
-    return score
 
-
-def is_target_company(job):
     company = job.get("company", "").lower()
-    return any(name in company for name in TARGET_COMPANIES)
+    if any(x in company for x in PREFERRED_COMPANIES):
+        score += 10
+    return score
 
 
 def append_results(jobs):
@@ -284,60 +252,23 @@ def append_results(jobs):
         json.dump(jobs + existing, f, indent=2)
 
 
-def build_email(jobs):
-    priority = [j for j in jobs if is_target_company(j)]
-    other = [j for j in jobs if j not in priority]
-
-    def rows(items):
-        html = ""
-        for job in items:
-            html += (
-                "<tr style='border-bottom:1px solid #334155'>"
-                f"<td style='padding:9px'>{job['title']}<br><small>{job['company']}</small></td>"
-                f"<td style='padding:9px'>{job['location']}</td>"
-                f"<td style='padding:9px'>{job['posted']}</td>"
-                f"<td style='padding:9px'><a href='{job['url']}'>Apply</a></td>"
-                "</tr>"
-            )
-        return html
-
-    def section(title, items):
-        if not items:
-            return ""
-        return (
-            f"<h3>{title} ({len(items)})</h3>"
-            "<table style='width:100%;border-collapse:collapse'>"
-            "<tr><th align='left'>Role / Company</th><th align='left'>Location</th>"
-            "<th align='left'>Posted</th><th align='left'>Apply</th></tr>"
-            f"{rows(items)}</table>"
-        )
-
-    return (
-        "<html><body style='font-family:Arial'>"
-        f"<h2>Hyderabad + Bangalore Full-time Java Jobs</h2>"
-        f"<p>{len(jobs)} new relevant jobs from the last {MAX_JOB_AGE_DAYS} days.</p>"
-        f"{section('Priority companies', priority)}"
-        f"{section('Other strong matches', other)}"
-        "</body></html>"
-    )
-
-
 def send_email(jobs):
     if not all([EMAIL_FROM, EMAIL_TO, EMAIL_PASSWORD]):
         return
-
     message = MIMEMultipart("alternative")
     message["Subject"] = f"[Job Hunter] {len(jobs)} new Hyderabad/Bangalore full-time Java jobs"
-    message["From"] = EMAIL_FROM
-    message["To"] = EMAIL_TO
-
+    message["From"], message["To"] = EMAIL_FROM, EMAIL_TO
     plain = f"Found {len(jobs)} relevant full-time jobs in Hyderabad/Bangalore.\n\n"
-    for job in jobs:
-        plain += f"{job['title']} | {job['company']} | {job['location']} | {job['posted']}\n{job['url']}\n\n"
-
+    for j in jobs:
+        plain += f"[{j['score']}] {j['title']} | {j['company']} | {j['location']} | {j['posted']}\n{j['url']}\n\n"
+    html = "<html><body><h2>Hyderabad + Bangalore Full-time Java Jobs</h2>"
+    html += f"<p>{len(jobs)} new relevant jobs from the last {MAX_JOB_AGE_DAYS} days.</p><table border='1' cellpadding='6' cellspacing='0'>"
+    html += "<tr><th>Score</th><th>Role</th><th>Company</th><th>Location</th><th>Posted</th><th>Apply</th></tr>"
+    for j in jobs:
+        html += f"<tr><td>{j['score']}</td><td>{j['title']}</td><td>{j['company']}</td><td>{j['location']}</td><td>{j['posted']}</td><td><a href='{j['url']}'>Apply</a></td></tr>"
+    html += "</table></body></html>"
     message.attach(MIMEText(plain, "plain"))
-    message.attach(MIMEText(build_email(jobs), "html"))
-
+    message.attach(MIMEText(html, "html"))
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(EMAIL_FROM, EMAIL_PASSWORD)
@@ -349,17 +280,12 @@ def send_email(jobs):
 
 def run_search():
     log.info("=" * 70)
-    log.info(
-        "Search scope: Hyderabad + Bangalore | India | Full-time only | Last %s days",
-        MAX_JOB_AGE_DAYS,
-    )
-
+    log.info("Search: Hyderabad + Bangalore | India | Full-time only | Last %s days", MAX_JOB_AGE_DAYS)
+    seen = load_seen()
+    new_jobs = []
     if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
         log.error("ADZUNA_APP_ID / ADZUNA_APP_KEY not set")
         return
-
-    seen = load_seen()
-    new_jobs = []
 
     for location in LOCATIONS:
         for keyword in KEYWORDS:
@@ -376,18 +302,20 @@ def run_search():
                     if score >= 30:
                         job["score"] = score
                         new_jobs.append(job)
-                # Keep API usage reasonable.
-                import time
                 time.sleep(0.4)
 
     save_seen(seen)
-    new_jobs.sort(key=lambda job: (-job["score"], job["posted"]), reverse=False)
+    # Deduplicate the same job returned under multiple keyword searches.
+    unique = {}
+    for job in new_jobs:
+        unique[job["url"]] = job
+    new_jobs = list(unique.values())
+    new_jobs.sort(key=lambda j: (-j["score"], j["posted"], j["company"].lower()))
     append_results(new_jobs)
 
-    log.info("Found %s new relevant full-time jobs", len(new_jobs))
+    log.info("Found %s NEW relevant jobs", len(new_jobs))
     for job in new_jobs:
         log.info("[%s] %s | %s | %s", job["score"], job["title"], job["company"], job["location"])
-
     if new_jobs:
         send_email(new_jobs)
 
