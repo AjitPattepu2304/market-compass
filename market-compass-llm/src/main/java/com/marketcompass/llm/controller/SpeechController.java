@@ -5,6 +5,8 @@ import com.marketcompass.llm.dto.TranscribeResponse;
 import com.marketcompass.llm.groq.GroqSpeechService;
 import com.marketcompass.llm.groq.LiveInterviewService;
 import com.marketcompass.llm.interview.CandidateProfileStore;
+import com.marketcompass.llm.interview.InterviewAnalysis;
+import com.marketcompass.llm.interview.InterviewGuidanceService;
 import com.marketcompass.llm.service.LLMService;
 import com.marketcompass.llm.service.SpeechService;
 import jakarta.servlet.http.HttpSession;
@@ -25,11 +27,8 @@ public class SpeechController {
     @Autowired(required = false) private GroqSpeechService groqSpeechService;
     @Autowired(required = false) private LiveInterviewService liveInterviewService;
     @Autowired private CandidateProfileStore candidateProfileStore;
+    @Autowired private InterviewGuidanceService interviewGuidanceService;
 
-    /**
-     * Starts a new interview using the saved resume when request.resume is omitted.
-     * Supplying a resume explicitly also updates the reusable candidate profile.
-     */
     @PostMapping("/setup")
     public ResponseEntity<String> setup(@RequestBody SetupRequest request, HttpSession session) {
         if (request.getJobDescription() == null || request.getJobDescription().isBlank()) {
@@ -40,9 +39,7 @@ public class SpeechController {
         if (resume != null && !resume.isBlank()) {
             candidateProfileStore.saveResume(resume);
         } else {
-            resume = candidateProfileStore.load()
-                    .map(p -> p.getResume())
-                    .orElse(null);
+            resume = candidateProfileStore.load().map(p -> p.getResume()).orElse(null);
         }
 
         if (resume == null || resume.isBlank()) {
@@ -59,9 +56,7 @@ public class SpeechController {
 
     @PostMapping("/transcribe")
     public ResponseEntity<TranscribeResponse> transcribe(@RequestParam("audio") MultipartFile audio) throws Exception {
-        String transcript = groqSpeechService != null
-                ? groqSpeechService.transcribe(audio)
-                : localSpeechService.transcribe(audio);
+        String transcript = groqSpeechService != null ? groqSpeechService.transcribe(audio) : localSpeechService.transcribe(audio);
         return ResponseEntity.ok(TranscribeResponse.builder().transcript(transcript).build());
     }
 
@@ -94,28 +89,17 @@ public class SpeechController {
             answer = localLLMService.answerQuestion(prompt, jd, resume);
         }
 
-        history.add(Map.of("role", "user", "content", "Live interview:\n" + conversation));
-        history.add(Map.of("role", "assistant", "content", answer));
-        if (history.size() > 8) {
-            history = new ArrayList<>(history.subList(history.size() - 8, history.size()));
-        }
+        InterviewAnalysis analysis = interviewGuidanceService.analyze(conversation, history);
+        appendHistory(history, conversation, answer, analysis);
         session.setAttribute("history", history);
 
-        return ResponseEntity.ok(TranscribeResponse.builder()
-                .transcript(conversation)
-                .answer(answer)
-                .model(liveInterviewService != null ? "groq/live-interview" : "ollama/live-interview")
-                .build());
+        return response(conversation, answer, liveInterviewService != null ? "groq/live-interview" : "ollama/live-interview", analysis);
     }
 
     @PostMapping("/ask")
-    public ResponseEntity<TranscribeResponse> transcribeAndAsk(
-            @RequestParam("audio") MultipartFile audio,
-            HttpSession session) throws Exception {
-
+    public ResponseEntity<TranscribeResponse> transcribeAndAsk(@RequestParam("audio") MultipartFile audio, HttpSession session) throws Exception {
         if (!Boolean.TRUE.equals(session.getAttribute("sessionActive"))) {
-            return ResponseEntity.badRequest().body(TranscribeResponse.builder()
-                    .answer("The interview session has ended.").build());
+            return ResponseEntity.badRequest().body(TranscribeResponse.builder().answer("The interview session has ended.").build());
         }
 
         String jd = (String) session.getAttribute("jobDescription");
@@ -127,18 +111,12 @@ public class SpeechController {
         String transcript;
         String answer;
         String model;
-
         if (groqSpeechService != null) {
             transcript = groqSpeechService.transcribe(audio);
-
             if (transcript.isBlank()) {
-                return ResponseEntity.badRequest().body(TranscribeResponse.builder()
-                        .transcript("")
-                        .answer("I could not hear a complete question. Please try Answer Now again.")
-                        .model("groq/stt")
-                        .build());
+                return ResponseEntity.badRequest().body(TranscribeResponse.builder().transcript("")
+                        .answer("I could not hear a complete question. Please try Answer Now again.").model("groq/stt").build());
             }
-
             if (liveInterviewService != null) {
                 answer = liveInterviewService.answer(transcript, jd, resume, history);
                 model = "groq/live-interview";
@@ -153,17 +131,27 @@ public class SpeechController {
             model = response.getModel();
         }
 
-        history.add(Map.of("role", "user", "content", "Live interview:\n" + transcript));
-        history.add(Map.of("role", "assistant", "content", answer));
-        if (history.size() > 8) {
-            history = new ArrayList<>(history.subList(history.size() - 8, history.size()));
-        }
+        InterviewAnalysis analysis = interviewGuidanceService.analyze(transcript, history);
+        appendHistory(history, transcript, answer, analysis);
         session.setAttribute("history", history);
+        return response(transcript, answer, model, analysis);
+    }
 
+    private void appendHistory(List<Map<String, String>> history, String transcript, String answer, InterviewAnalysis analysis) {
+        history.add(Map.of("role", "user", "content", "Live interview:\n" + transcript,
+                "questionType", analysis.getQuestionType().name(), "topic", analysis.getTopic()));
+        history.add(Map.of("role", "assistant", "content", answer));
+        if (history.size() > 8) history.subList(0, history.size() - 8).clear();
+    }
+
+    private ResponseEntity<TranscribeResponse> response(String transcript, String answer, String model, InterviewAnalysis analysis) {
         return ResponseEntity.ok(TranscribeResponse.builder()
                 .transcript(transcript)
                 .answer(answer)
                 .model(model)
+                .questionType(analysis.getQuestionType().name())
+                .topic(analysis.getTopic())
+                .likelyFollowUps(analysis.getLikelyFollowUps())
                 .build());
     }
 
