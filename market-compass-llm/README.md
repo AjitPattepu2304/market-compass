@@ -1,175 +1,88 @@
 # MarketCompass LLM Module
 
-LLM-powered Q&A service for investment advice using **Ollama** and **LLaMA2**.
+LLM-powered Q&A and interview-assistant service using Ollama/Groq, speech-to-text, and LLaMA-family models.
 
-## Prerequisites
+## Interview Assistant
 
-### 1. Install Ollama
+The interview assistant is designed as a real-time candidate copilot rather than a generic answer generator.
 
-Download and install from: https://ollama.ai
+### Reusable candidate profile
 
-**macOS:**
-```bash
-brew install ollama
-```
-
-**Linux:**
-```bash
-curl https://ollama.ai/install.sh | sh
-```
-
-**Windows:**
-Download from https://ollama.ai/download
-
-### 2. Pull LLaMA2 Model
+A resume is now a persistent candidate profile. Upload it once:
 
 ```bash
-ollama pull llama2
+curl -X PUT http://localhost:8081/api/interview/profile/resume \
+  -H 'Content-Type: application/json' \
+  -d '{"resume":"YOUR RESUME TEXT"}'
 ```
 
-This downloads the LLaMA2 model (~4GB). You only need to do this once.
-
-### 3. Start Ollama Server
+Check whether a saved profile exists:
 
 ```bash
-ollama serve
+curl http://localhost:8081/api/interview/profile
 ```
 
-The server will run on `http://localhost:11434` by default.
-
-## Running the LLM Service
-
-### From Maven
+Start every new interview with only the new job description:
 
 ```bash
-# From project root
-cd market-compass-llm
-mvn spring-boot:run
+curl -X POST http://localhost:8081/api/stt/setup \
+  -H 'Content-Type: application/json' \
+  -d '{"jobDescription":"NEW JOB DESCRIPTION"}'
 ```
 
-The service will start on `http://localhost:8081`
+You can still supply `resume` in `/api/stt/setup` when you intentionally want to replace the saved candidate profile.
 
-### From IntelliJ
+### Live interview guidance
 
-1. Right-click `MarketCompassLLMApplication.java`
-2. Select **Run 'MarketCompassLLMApplication'**
+`/api/stt/answer-live` and `/api/stt/ask` now return:
 
-## API Endpoints
+- `questionType` — technical, experience, behavioral, follow-up, coding, or system design
+- `topic` — current interview topic
+- `likelyFollowUps` — likely next questions to prepare for
+- `answer` — the candidate-facing answer generated using the saved candidate context
 
-### 1. Ask a Question
+The session keeps the current JD and conversation history separate from the reusable resume.
+
+### Persistence
+
+By default the candidate profile is stored at:
+
+```text
+~/.marketcompass/candidate-profile.json
+```
+
+For Docker, set `INTERVIEW_CANDIDATE_PROFILE_PATH` to a path backed by a persistent volume.
+
+## Existing LLM/STT APIs
+
+### Ask a Question
 
 ```bash
 POST /api/llm/qa
 Content-Type: application/json
 
-{
-  "question": "What is a good dividend stock for beginners?"
-}
+{"question":"What is a good dividend stock for beginners?"}
 ```
 
-**Response:**
-```json
-{
-  "question": "What is a good dividend stock for beginners?",
-  "answer": "For beginners looking to invest in dividend stocks, consider blue-chip companies with...",
-  "model": "ollama/llama2",
-  "timestamp": "2026-01-15T10:30:00"
-}
-```
-
-### 2. Ask with Context
-
-Include portfolio or market context for more tailored responses:
+### Ask with Context
 
 ```bash
 POST /api/llm/qa/contextual
 Content-Type: application/json
 
-{
-  "question": "Should I buy more AAPL?",
-  "context": "Current portfolio: 100 shares of AAPL at $180, 50 shares of MSFT at $420. Current market: Tech sector up 5% this quarter."
-}
+{"question":"Should I buy more AAPL?","context":"Current portfolio: 100 shares of AAPL at $180."}
 ```
 
-### 3. Health Check
+### Health Check
 
 ```bash
 GET /api/llm/health
 ```
 
-**Response:**
-```
-LLM service is running
-```
-
-## Configuration
-
-Edit `src/main/resources/application.yml` to customize:
-
-```yaml
-spring:
-  ai:
-    ollama:
-      base-url: http://localhost:11434  # Ollama server URL
-      model: llama2                      # Model to use
-```
-
-## Troubleshooting
-
-### "Connection refused" error
-
-1. Make sure Ollama is running: `ollama serve`
-2. Check it's on the correct port: `http://localhost:11434`
-3. Verify in application.yml that `base-url` matches
-
-### Model not found
+## Running
 
 ```bash
-# List available models
-ollama list
-
-# Pull a model
-ollama pull llama2
+mvn spring-boot:run
 ```
 
-### Slow responses
-
-- LLaMA2 can be slow on CPU-only machines (10-30 seconds per response)
-- GPU acceleration will improve performance significantly
-- Consider using a smaller model: `ollama pull neural-chat` (faster, less accurate)
-
-## Architecture
-
-```
-QAController
-    ↓
-LLMService
-    ↓
-Spring AI ChatClient
-    ↓
-Ollama API
-    ↓
-LLaMA2 Model
-```
-
-## Next Steps
-
-1. **Integrate with Market-Compass-Core**
-   - Call LLM service from investment endpoints
-   - Add context from portfolio/market data
-
-2. **Enhancements**
-   - Add RAG (Retrieval-Augmented Generation) for financial documents
-   - Implement caching for common questions
-   - Add conversation history/multi-turn support
-
-3. **Models to Try**
-   - `mistral` — faster, good performance
-   - `neural-chat` — optimized for chat
-   - `llama2-uncensored` — less filtered responses
-
-## Resources
-
-- [Ollama Documentation](https://github.com/ollama/ollama)
-- [Spring AI Guide](https://spring.io/projects/spring-ai)
-- [LLaMA2 Paper](https://arxiv.org/abs/2307.09288)
+The service runs on `http://localhost:8081` by default.
