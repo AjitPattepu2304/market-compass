@@ -17,14 +17,12 @@ public class QuestionClassifier {
 
         if (isFollowUp(q, previousQuestion)) return QuestionType.FOLLOW_UP;
 
+        // Coding means the interviewer is asking the candidate to implement/solve something,
+        // not merely explain a data structure or algorithm concept.
         if (containsAny(q,
-                "write code", "implement", "coding", "leetcode", "algorithm", "code this",
-                "solve this", "time complexity", "space complexity",
-                "array", "arrays", "linked list", "stack", "queue", "deque",
-                "hashmap", "hash map", "hashset", "hash set", "hashtable", "hash table",
-                "binary tree", "binary search tree", "heap", "priority queue", "trie",
-                "graph", "graphs", "dynamic programming", "recursion", "backtracking",
-                "sorting", "searching", "two pointer", "sliding window")) {
+                "write code", "write a program", "implement", "coding question", "leetcode",
+                "code this", "solve this", "solve the problem", "provide code", "show me the code",
+                "write the code", "write a solution", "code an algorithm")) {
             return QuestionType.CODING;
         }
 
@@ -50,7 +48,8 @@ public class QuestionClassifier {
             return QuestionType.EXPERIENCE;
         }
 
-        // Common software-engineering concepts should always be treated as technical.
+        // Common software-engineering and computer-science concepts are technical.
+        // This includes questions such as "What is HashMap?" and "How does Kafka work?".
         if (containsAny(q,
                 "java", "jvm", "spring", "spring boot", "kotlin", "microservice", "microservices",
                 "rest", "restful", "api", "http", "https", "json", "oauth", "jwt",
@@ -60,6 +59,11 @@ public class QuestionClassifier {
                 "thread", "threads", "multithreading", "concurrency", "synchronization", "deadlock",
                 "garbage collection", "garbage collector", "heap", "stack", "polymorphism",
                 "inheritance", "encapsulation", "abstraction", "interface", "class", "object",
+                "hashmap", "hash map", "hashset", "hash set", "hashtable", "hash table",
+                "array", "arrays", "linked list", "linked lists", "queue", "queues", "deque",
+                "binary tree", "binary search tree", "heap", "priority queue", "trie", "graph", "graphs",
+                "dynamic programming", "recursion", "backtracking", "sorting", "searching",
+                "time complexity", "space complexity", "big o", "data structure", "data structures",
                 "dependency injection", "solid", "design pattern", "observer pattern", "factory pattern",
                 "singleton", "exception handling", "stream api", "lambda", "generics", "collections",
                 "optional", "completablefuture", "async", "synchronous", "asynchronous", "thread pool",
@@ -68,7 +72,7 @@ public class QuestionClassifier {
             return QuestionType.TECHNICAL;
         }
 
-        // If the transcript is a normal non-empty question, the safest default is technical.
+        // A normal non-empty interview question with no special signal defaults to technical.
         return QuestionType.TECHNICAL;
     }
 
