@@ -90,6 +90,7 @@ public class SpeechController {
         }
 
         InterviewAnalysis analysis = interviewGuidanceService.analyze(conversation, history);
+        answer = ensureAnswer(answer, analysis);
         appendHistory(history, conversation, answer, analysis);
         session.setAttribute("history", history);
 
@@ -112,7 +113,7 @@ public class SpeechController {
         String answer;
         String model;
         if (groqSpeechService != null) {
-            transcript = groqSpeechService.transcribe(audio);
+            transcript = groqSpeechService.transcribe(audio, jd, resume);
             if (transcript.isBlank()) {
                 return ResponseEntity.badRequest().body(TranscribeResponse.builder().transcript("")
                         .answer("I could not hear a complete question. Please try Answer Now again.").model("groq/stt").build());
@@ -132,9 +133,19 @@ public class SpeechController {
         }
 
         InterviewAnalysis analysis = interviewGuidanceService.analyze(transcript, history);
+        answer = ensureAnswer(answer, analysis);
         appendHistory(history, transcript, answer, analysis);
         session.setAttribute("history", history);
         return response(transcript, answer, model, analysis);
+    }
+
+    private String ensureAnswer(String answer, InterviewAnalysis analysis) {
+        if (answer != null && !answer.isBlank()) return answer.trim();
+        String question = analysis == null ? "" : analysis.getQuestion();
+        if (question == null || question.isBlank()) {
+            return "I’d wait for the interviewer to finish.";
+        }
+        return "I want to make sure I heard the question correctly. Could you repeat that?";
     }
 
     private void appendHistory(List<Map<String, String>> history, String transcript, String answer, InterviewAnalysis analysis) {
